@@ -1,0 +1,1626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BC Algo">
+<meta name="description" content="Interactive algorithm visualizer for every major algorithm category">
+<link rel="manifest" href="manifest.json">
+<title>BC Algorithms</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ─── RESET ─── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+
+/* ─── TOKENS ─── */
+:root{
+  --bg:        #0a0e1a;
+  --bg1:       #0d1220;
+  --bg2:       #111827;
+  --surface:   #161d2e;
+  --surface2:  #1c2538;
+  --border:    #1e2d47;
+  --border2:   #243349;
+  --txt:       #e2e8f0;
+  --txt2:      #94a3b8;
+  --txt3:      #4a5568;
+  --accent:    #38bdf8;
+  --accent2:   #7dd3fc;
+  --accentbg:  rgba(56,189,248,.10);
+  --accentbg2: rgba(56,189,248,.06);
+  --green:     #4ade80;
+  --greenbg:   rgba(74,222,128,.08);
+  --red:       #f87171;
+  --redbg:     rgba(248,113,113,.08);
+  --yellow:    #fbbf24;
+  --purple:    #a78bfa;
+  --purplebg:  rgba(167,139,250,.08);
+  --orange:    #fb923c;
+  --sidebar-w: 272px;
+  --hdr-h:     52px;
+  --radius:    10px;
+  --font:      'IBM Plex Sans', system-ui, sans-serif;
+  --mono:      'IBM Plex Mono', 'Courier New', monospace;
+}
+.light{
+  --bg:       #f8fafc;
+  --bg1:      #f1f5f9;
+  --bg2:      #e9eef6;
+  --surface:  #ffffff;
+  --surface2: #f4f7fb;
+  --border:   #dde3ed;
+  --border2:  #c8d2e0;
+  --txt:      #0f172a;
+  --txt2:     #475569;
+  --txt3:     #94a3b8;
+  --accent:   #0284c7;
+  --accent2:  #0369a1;
+  --accentbg: rgba(2,132,199,.08);
+  --accentbg2:rgba(2,132,199,.05);
+  --green:    #16a34a;
+  --greenbg:  rgba(22,163,74,.07);
+  --red:      #dc2626;
+  --redbg:    rgba(220,38,38,.07);
+  --purple:   #7c3aed;
+  --purplebg: rgba(124,58,237,.07);
+}
+
+/* ─── FONT BASE ─── */
+body{font-family:var(--font);color:var(--txt);background:var(--bg);font-size:14px;line-height:1.5}
+::selection{background:var(--accentbg);color:var(--accent)}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+
+/* ─── APP SHELL ─── */
+#app{display:flex;height:100dvh;overflow:hidden;position:relative}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(2px);z-index:200;display:none}
+.overlay.show{display:block}
+
+/* ─── SIDEBAR ─── */
+.sidebar{
+  width:var(--sidebar-w);background:var(--bg1);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;height:100dvh;
+  flex-shrink:0;position:relative;
+  transition:transform .3s cubic-bezier(.4,0,.2,1);z-index:201;
+}
+.sb-head{
+  height:var(--hdr-h);display:flex;align-items:center;gap:10px;
+  padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-box{
+  width:28px;height:28px;background:var(--accent);border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-weight:600;font-size:14px;color:#0a0e1a;
+  flex-shrink:0;
+}
+.logo-name{font-family:var(--mono);font-weight:600;font-size:15px;color:var(--txt);letter-spacing:-.3px}
+.logo-name span{color:var(--accent)}
+
+.sb-search{padding:10px 12px;border-bottom:1px solid var(--border)}
+.sb-search input{
+  width:100%;background:var(--surface);border:1px solid var(--border2);
+  border-radius:8px;padding:7px 12px;font-size:13px;font-family:var(--font);
+  color:var(--txt);outline:none;transition:border-color .15s;
+}
+.sb-search input:focus{border-color:var(--accent)}
+.sb-search input::placeholder{color:var(--txt3)}
+
+.sb-scroll{flex:1;overflow-y:auto;padding:6px 8px}
+
+.cat-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 10px;border-radius:8px;cursor:pointer;
+  transition:background .12s;user-select:none;gap:6px;
+}
+.cat-row:hover{background:var(--surface)}
+.cat-name{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--txt2);flex:1}
+.cat-arrow{font-size:9px;color:var(--txt3);transition:transform .2s;flex-shrink:0}
+.cat-open .cat-arrow{transform:rotate(90deg)}
+.cat-count{font-family:var(--mono);font-size:10px;color:var(--txt3);background:var(--surface2);
+  border:1px solid var(--border);border-radius:12px;padding:1px 7px;flex-shrink:0}
+.cat-open .cat-count{color:var(--accent);border-color:var(--border2)}
+
+.alg-sub{padding-left:8px;margin-bottom:4px}
+.alg-row{
+  padding:5px 10px;border-radius:7px;cursor:pointer;font-size:13px;
+  color:var(--txt2);transition:all .12s;display:flex;align-items:center;gap:8px;
+}
+.alg-row:hover{background:var(--surface);color:var(--txt)}
+.alg-row.sel{background:var(--accentbg);color:var(--accent);font-weight:500}
+.alg-dot{width:4px;height:4px;border-radius:50%;background:var(--border2);flex-shrink:0;transition:.15s}
+.alg-row.sel .alg-dot{background:var(--accent)}
+
+.sb-foot{
+  padding:10px 14px;border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.gh{font-size:11px;color:var(--txt3);text-decoration:none;display:flex;align-items:center;gap:5px;transition:.12s}
+.gh:hover{color:var(--accent)}
+.theme-tog{
+  width:30px;height:30px;border-radius:8px;border:1px solid var(--border2);
+  background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:14px;transition:.12s;color:var(--txt);
+}
+.theme-tog:hover{border-color:var(--accent);background:var(--accentbg)}
+
+/* ─── MAIN ─── */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;height:100dvh;overflow:hidden}
+
+.topbar{
+  height:var(--hdr-h);background:var(--bg1);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;
+}
+.menu-btn{
+  display:none;width:30px;height:30px;border-radius:8px;border:1px solid var(--border2);
+  background:var(--surface);cursor:pointer;align-items:center;justify-content:center;
+  font-size:16px;color:var(--txt);flex-shrink:0;
+}
+.tb-title{font-family:var(--mono);font-weight:600;font-size:14px;color:var(--txt)}
+.tb-cat{font-size:11px;color:var(--txt3);font-family:var(--mono)}
+.tb-spacer{flex:1}
+.live-badge{
+  font-family:var(--mono);font-size:10px;padding:3px 8px;
+  background:var(--greenbg);color:var(--green);border-radius:12px;
+  border:1px solid rgba(74,222,128,.2);letter-spacing:.06em;
+}
+.install-btn{
+  font-size:11px;padding:4px 10px;background:var(--accentbg);color:var(--accent);
+  border:1px solid var(--border2);border-radius:8px;cursor:pointer;font-family:var(--mono);
+  transition:.15s;display:none;align-items:center;gap:5px;
+}
+.install-btn.show{display:flex}
+.install-btn:hover{background:var(--accent);color:#0a0e1a}
+
+.content{flex:1;overflow-y:auto;padding:20px}
+
+/* ─── EMPTY ─── */
+.empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;opacity:.3}
+.empty-glyph{font-size:56px;filter:grayscale(1)}
+.empty-txt{font-family:var(--mono);font-size:16px;text-align:center;line-height:1.6}
+
+/* ─── TABS ─── */
+.tabs{display:flex;gap:2px;margin-bottom:18px;background:var(--surface);
+  border:1px solid var(--border);border-radius:10px;padding:3px;width:fit-content}
+.tab{
+  padding:6px 16px;border-radius:7px;border:none;background:none;
+  cursor:pointer;font-size:12px;font-weight:500;color:var(--txt2);
+  font-family:var(--mono);transition:.15s;letter-spacing:.02em;
+}
+.tab.on{background:var(--accentbg);color:var(--accent)}
+
+/* ─── CONTROLS ─── */
+.controls{
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;
+}
+.cbtn{
+  padding:6px 14px;border-radius:8px;border:1px solid var(--border2);
+  background:var(--bg2);cursor:pointer;font-size:12px;color:var(--txt);
+  font-family:var(--mono);transition:.15s;display:flex;align-items:center;gap:6px;
+}
+.cbtn:hover{border-color:var(--accent);background:var(--accentbg);color:var(--accent)}
+.playbtn{
+  padding:7px 20px;border-radius:8px;border:1px solid var(--accent);
+  background:var(--accent);cursor:pointer;font-size:12px;color:#0a0e1a;
+  font-family:var(--mono);font-weight:600;transition:.15s;display:flex;align-items:center;gap:6px;
+}
+.playbtn:hover{background:var(--accent2);border-color:var(--accent2)}
+.playbtn.paused{background:transparent;color:var(--accent);border-color:var(--accent)}
+.playbtn.paused:hover{background:var(--accentbg)}
+.speed-row{display:flex;align-items:center;gap:8px;margin-left:auto}
+.spd-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--txt3);font-family:var(--mono)}
+input[type=range]{accent-color:var(--accent);width:90px}
+.stat-row{font-family:var(--mono);font-size:11px;color:var(--txt3)}
+.stat-row span{color:var(--accent)}
+
+/* ─── CANVAS ─── */
+.cvs-wrap{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;margin-bottom:16px;
+}
+canvas{width:100%;display:block}
+
+/* ─── INFO PANEL ─── */
+.info-wrap{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.cplx-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px 16px;
+}
+.cplx-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--accent);margin-bottom:4px;font-family:var(--mono)}
+.cplx-val{font-family:var(--mono);font-size:18px;font-weight:600;color:var(--txt)}
+
+/* ─── ELI5 ─── */
+.eli5{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.eli5-hd{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.eli5-emoji{font-size:22px}
+.eli5-title{font-family:var(--mono);font-weight:600;font-size:13px;color:var(--txt);letter-spacing:.02em}
+.eli5-body{
+  font-size:14px;line-height:1.7;color:var(--txt2);padding:14px;
+  background:var(--bg2);border-radius:8px;border-left:3px solid var(--accent);
+  margin-bottom:16px;
+}
+.eli5-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.eli5-col-hd{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;font-family:var(--mono)}
+.eli5-col-hd.g{color:var(--green)}.eli5-col-hd.r{color:var(--red)}.eli5-col-hd.b{color:var(--accent)}
+.eli5-ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+.eli5-ul li{font-size:13px;color:var(--txt2);line-height:1.5;padding-left:12px;position:relative}
+.eli5-ul li::before{content:'';position:absolute;left:0;top:9px;width:4px;height:4px;border-radius:50%}
+.eli5-ul.g li::before{background:var(--green)}.eli5-ul.r li::before{background:var(--red)}.eli5-ul.b li::before{background:var(--accent)}
+.avoid-note{margin-top:12px;font-size:11px;color:var(--txt3);font-style:italic}
+.avoid-note strong{color:var(--txt2);font-style:normal}
+
+/* ─── CODE (MONOKAI) ─── */
+.code-wrap{
+  background:#272822;border:1px solid #3e3d32;border-radius:var(--radius);
+  padding:20px;overflow:auto;max-height:72vh;
+}
+.code-wrap pre{
+  font-family:var(--mono);font-size:13px;line-height:1.7;
+  white-space:pre-wrap;word-break:break-word;color:#f8f8f2;
+}
+.code-hdr{
+  background:#1e1f1a;border:1px solid #3e3d32;border-bottom:none;
+  border-radius:var(--radius) var(--radius) 0 0;
+  padding:8px 16px;display:flex;align-items:center;gap:8px;
+}
+.code-dots{display:flex;gap:5px}
+.code-dots span{width:10px;height:10px;border-radius:50%}
+.code-fname{font-family:var(--mono);font-size:11px;color:#75715e;margin-left:auto}
+
+/* Monokai syntax */
+.mk-kw{color:#f92672}
+.mk-fn{color:#a6e22e}
+.mk-st{color:#e6db74}
+.mk-cm{color:#75715e;font-style:italic}
+.mk-nm{color:#ae81ff}
+.mk-op{color:#f8f8f2}
+.mk-bi{color:#66d9ef}
+
+/* ─── DESC ─── */
+.desc-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:22px}
+.desc-title{font-family:var(--mono);font-weight:600;font-size:20px;color:var(--txt);margin-bottom:8px}
+.desc-sub{font-size:13px;color:var(--txt2);line-height:1.7;margin-bottom:20px}
+
+/* ─── ANIM ─── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.anim{animation:fadeUp .2s ease both}
+
+/* ─── MOBILE ─── */
+@media(max-width:700px){
+  .sidebar{position:fixed;left:0;top:0;height:100%;transform:translateX(-110%);box-shadow:8px 0 40px rgba(0,0,0,.5)}
+  .sidebar.open{transform:translateX(0)}
+  .menu-btn{display:flex}
+  .eli5-grid{grid-template-columns:1fr}
+  .info-wrap{grid-template-columns:1fr 1fr 1fr}
+  .speed-row{margin-left:0;width:100%}
+  .content{padding:12px}
+  .controls{padding:10px}
+  .tab{padding:6px 12px}
+  .topbar{padding:0 12px}
+}
+@media(max-width:420px){
+  .info-wrap{grid-template-columns:1fr 1fr}
+  .tabs{width:100%}
+  .tab{flex:1;text-align:center}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- overlay -->
+  <div class="overlay" :class="{show:drawerOpen}" @click="drawerOpen=false"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" :class="{open:drawerOpen}">
+    <div class="sb-head">
+      <div class="logo">
+        <div class="logo-box">B</div>
+        <div class="logo-name">BC<span>Algo</span></div>
+      </div>
+    </div>
+    <div class="sb-search">
+      <input v-model="q" placeholder="Search…" @input="onSearch">
+    </div>
+    <div class="sb-scroll">
+      <div v-for="(algs,cat) in filtered" :key="cat">
+        <div class="cat-row" :class="{'cat-open':ex[cat]}" @click="toggleCat(cat)">
+          <span class="cat-name">{{ cat }}</span>
+          <span class="cat-count">{{ algs.length }}</span>
+          <span class="cat-arrow">▶</span>
+        </div>
+        <div class="alg-sub" v-if="ex[cat]">
+          <div v-for="a in algs" :key="a"
+            class="alg-row" :class="{sel:sel===a}"
+            @click="pick(cat,a)">
+            <span class="alg-dot"></span>{{ fmt(a) }}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sb-foot">
+      <a href="https://github.com/keon/algorithms" target="_blank" class="gh">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        keon/algorithms
+      </a>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="install-btn" :class="{show:canInstall}" @click="installPWA">⊕ Install</button>
+        <button class="theme-tog" @click="toggleTheme">{{ light?'🌙':'☀️' }}</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <header class="topbar">
+      <button class="menu-btn" @click="drawerOpen=true">☰</button>
+      <div v-if="sel">
+        <div class="tb-title">{{ fmt(sel) }}</div>
+        <div class="tb-cat">{{ selCat }}</div>
+      </div>
+      <div v-else style="font-family:var(--mono);font-size:14px;color:var(--txt3)">BC Algorithms</div>
+      <div class="tb-spacer"></div>
+      <span v-if="sel" class="live-badge">LIVE</span>
+    </header>
+
+    <div class="content">
+
+      <!-- EMPTY -->
+      <div v-if="!sel" class="empty anim" style="height:calc(100dvh - 52px - 40px)">
+        <div class="empty-glyph">⌬</div>
+        <div class="empty-txt">select an algorithm<br>from the sidebar</div>
+      </div>
+
+      <!-- SELECTED VIEW -->
+      <div v-else class="anim" :key="sel">
+
+        <div class="tabs">
+          <button v-for="t in tabs" :key="t" class="tab" :class="{on:tab===t}" @click="tab=t">{{ t }}</button>
+        </div>
+
+        <!-- ═══ VISUALIZE ═══ -->
+        <template v-if="tab==='Visualize'">
+
+          <div class="info-wrap">
+            <div class="cplx-card">
+              <div class="cplx-lbl">Time</div>
+              <div class="cplx-val">{{ info.time }}</div>
+            </div>
+            <div class="cplx-card">
+              <div class="cplx-lbl">Space</div>
+              <div class="cplx-val">{{ info.space }}</div>
+            </div>
+          </div>
+
+          <div class="controls">
+            <button class="cbtn" @click="restart">⟳ New</button>
+            <button class="playbtn" :class="{paused:playing}" @click="togglePlay">
+              {{ playing ? '⏸ Pause' : '▶ Run' }}
+            </button>
+            <button class="cbtn" @click="stepOnce">Step →</button>
+            <div class="speed-row">
+              <span class="spd-lbl">Speed</span>
+              <input type="range" v-model.number="speed" min="10" max="990">
+            </div>
+            <span class="stat-row">step <span>{{ stepN }}</span></span>
+          </div>
+
+          <div class="cvs-wrap">
+            <canvas ref="cvs" height="360"></canvas>
+          </div>
+
+          <!-- ELI5 -->
+          <div class="eli5">
+            <div class="eli5-hd">
+              <span class="eli5-emoji">🧒</span>
+              <span class="eli5-title">ELI5 — Explain Like I'm Five</span>
+            </div>
+            <div class="eli5-body">{{ info.eli5 }}</div>
+            <div class="eli5-grid">
+              <div>
+                <div class="eli5-col-hd g">✓ Pros</div>
+                <ul class="eli5-ul g">
+                  <li v-for="p in info.pros" :key="p">{{ p }}</li>
+                </ul>
+              </div>
+              <div>
+                <div class="eli5-col-hd r">✗ Cons</div>
+                <ul class="eli5-ul r">
+                  <li v-for="c in info.cons" :key="c">{{ c }}</li>
+                </ul>
+              </div>
+              <div>
+                <div class="eli5-col-hd b">⊞ Used In</div>
+                <ul class="eli5-ul b">
+                  <li v-for="u in info.uses" :key="u">{{ u }}</li>
+                </ul>
+                <div class="avoid-note"><strong>Avoid:</strong> {{ info.avoid }}</div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- ═══ CODE ═══ -->
+        <template v-if="tab==='Code'">
+          <div class="code-hdr">
+            <div class="code-dots">
+              <span style="background:#ff5f57"></span>
+              <span style="background:#febc2e"></span>
+              <span style="background:#28c840"></span>
+            </div>
+            <span class="code-fname">{{ sel }}.py</span>
+          </div>
+          <div class="code-wrap">
+            <pre>{{ code || '# Loading…' }}</pre>
+          </div>
+        </template>
+
+        <!-- ═══ INFO ═══ -->
+        <template v-if="tab==='Info'">
+          <div class="desc-card">
+            <div class="desc-title">{{ fmt(sel) }}</div>
+            <div class="desc-sub">{{ info.desc }}</div>
+            <div class="info-wrap" style="margin-bottom:0">
+              <div class="cplx-card"><div class="cplx-lbl">Time</div><div class="cplx-val">{{ info.time }}</div></div>
+              <div class="cplx-card"><div class="cplx-lbl">Space</div><div class="cplx-val">{{ info.space }}</div></div>
+              <div class="cplx-card"><div class="cplx-lbl">Category</div><div class="cplx-val" style="font-size:13px">{{ selCat }}</div></div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const {createApp,reactive,ref,computed,watch,onMounted,nextTick} = Vue;
+
+// ─── DATA ───
+const ALGS = {
+  'Array':['delete_nth','flatten','garage','josephus','limit','longest_non_repeat','max_ones_index','merge_intervals','missing_ranges','move_zeros','n_sum','plus_one','remove_duplicates','rotate','summarize_ranges','three_sum','top_1','trimmean','two_sum'],
+  'Backtracking':['add_operators','anagram','array_sum_combinations','combination_sum','factor_combinations','find_words','generate_abbreviations','generate_parenthesis','letter_combination','palindrome_partitioning','pattern_match','permute','permute_unique','subsets','minimax','subsets_unique'],
+  'Bit Manipulation':['add_bitwise_operator','binary_gap','bit_operation','bytes_int_conversion','count_flips_to_convert','count_ones','find_difference','find_missing_number','flip_bit_longest_sequence','gray_code','has_alternative_bit','insert_bit','power_of_two','remove_bit','reverse_bits','single_number','single_number2','single_number3','subsets','swap_pair'],
+  'Compression':['elias','huffman_coding','rle_compression'],
+  'Dynamic Programming':['bitmask','buy_sell_stock','climbing_stairs','coin_change','combination_sum','count_paths_dp','edit_distance','egg_drop','fibonacci','hosoya_triangle','house_robber','int_divide','job_scheduling','k_factor','knapsack','longest_common_subsequence','longest_increasing','matrix_chain_order','max_product_subarray','max_subarray','min_cost_path','num_decodings','planting_trees','regex_matching','rod_cut','word_break'],
+  'Graph':['a_star','bellman_ford','check_bipartite','cycle_detection','dijkstra','dijkstra_heapq','find_path','kahns_algorithm','markov_chain','maximum_flow','minimum_spanning_tree','pacific_atlantic','tarjan','topological_sort_bfs','topological_sort_dfs','traversal'],
+  'Greedy':['gale_shapley','max_contiguous_subsequence_sum'],
+  'Heap':['k_closest_points','merge_sorted_k_lists','skyline','sliding_window_max'],
+  'Linked List':['add_two_numbers','copy_random_pointer','delete_node','first_cyclic_node','intersection','is_cyclic','is_palindrome','is_sorted','kth_to_last','merge_two_list','partition','remove_duplicates','remove_range','reverse','rotate_list','swap_in_pairs'],
+  'Map':['is_anagram','is_isomorphic','longest_common_subsequence','randomized_set','valid_sudoku','word_pattern'],
+  'Math':['base_conversion','chinese_remainder_theorem','combination','cosine_similarity','euler_totient','extended_gcd','factorial','fft','gcd','goldbach','hailstone','linear_regression','manhattan_distance','modular_exponential','nth_digit','num_digits','power','prime_check','primes_sieve_of_eratosthenes','sqrt_precision_factor','summing_digits'],
+  'Matrix':['bomb_enemy','copy_transform','count_paths','matrix_exponentiation','multiply','rotate_image','search_in_sorted_matrix','spiral_traversal','sudoku_validator'],
+  'Queue':['max_sliding_window','moving_average','reconstruct_queue','zigzagiterator'],
+  'Searching':['binary_search','exponential_search','find_min_rotate','first_occurrence','interpolation_search','jump_search','last_occurrence','linear_search','next_greatest_letter','search_insert','search_range','search_rotate','ternary_search','two_sum'],
+  'Sorting':['bead_sort','bitonic_sort','bogo_sort','bubble_sort','bucket_sort','cocktail_shaker_sort','comb_sort','counting_sort','cycle_sort','gnome_sort','heap_sort','insertion_sort','merge_sort','pancake_sort','quick_sort','radix_sort','selection_sort','shell_sort','stooge_sort','wiggle_sort'],
+  'Stack':['is_consecutive','is_sorted','longest_abs_path','ordered_stack','remove_min','simplify_path','stutter','switch_pairs','valid_parenthesis'],
+  'String':['add_binary','atbash_cipher','breaking_bad','caesar_cipher','check_pangram','count_binary_substring','decode_string','first_unique_char','fizzbuzz','group_anagrams','int_to_roman','is_palindrome','is_rotated','judge_circle','knuth_morris_pratt','longest_common_prefix','longest_palindromic_substring','manacher','multiply_strings','one_edit_distance','rabin_karp','repeat_string','reverse_string','roman_to_int','rotate','word_squares','z_algorithm'],
+  'Tree':['bin_tree_to_list','binary_tree_paths','bst_closest_value','bst_delete_node','bst_height','bst_is_bst','bst_iterator','bst_kth_smallest','bst_lowest_common_ancestor','deepest_left','invert_tree','is_balanced','is_subtree','is_symmetric','lowest_common_ancestor','max_height','max_path_sum','min_height','path_sum','same_tree','traversal_inorder','traversal_level_order','traversal_postorder','traversal_preorder','traversal_zigzag','trie_add_and_search']
+};
+
+// ─── ELI5 DATABASE ───
+const ELI5 = {
+  // SORTING
+  'Sorting:bubble_sort':{eli5:"Walk through the list again and again, swapping any two neighbours that are in the wrong order. Like bubbles of air rising to the surface — big numbers slowly bubble to the end.",pros:['Easy to code','No extra memory','Stable sort'],cons:['O(n²) — very slow on large data','Many unnecessary swaps'],uses:['Teaching sorting basics','Tiny arrays < 20 items'],avoid:'Production code or large datasets',time:'O(n²)',space:'O(1)',desc:'Repeatedly compares adjacent elements and swaps them if in the wrong order. Continues until no swaps occur.'},
+  'Sorting:insertion_sort':{eli5:"Like sorting playing cards in your hand: pick one card at a time and slide it left until it's in the right spot among the already-sorted cards.",pros:['Fast on nearly-sorted data','Stable','Very low overhead'],cons:['O(n²) on random data','Many element shifts'],uses:['Small arrays','Nearly-sorted streams','Sub-routine in Timsort'],avoid:'Large random datasets',time:'O(n²)',space:'O(1)',desc:'Builds the sorted array one element at a time by inserting each new element into its correct position.'},
+  'Sorting:selection_sort':{eli5:"Scan everything, find the smallest item, put it first. Scan the rest, find the next smallest, put it second. Keep going.",pros:['Minimal swaps O(n)','Simple to understand'],cons:['Always O(n²) comparisons','Not stable'],uses:['When swaps are costly (flash memory)','Tiny arrays'],avoid:'Any performance-sensitive code',time:'O(n²)',space:'O(1)',desc:'Divides array into sorted/unsorted parts; repeatedly picks the minimum from unsorted and appends to sorted.'},
+  'Sorting:quick_sort':{eli5:"Pick a pivot number. Put smaller numbers left, bigger ones right. Do the same on each side recursively. Divide and conquer!",pros:['Fastest average case O(n log n)','In-place (O(log n) stack)','Cache-friendly'],cons:['Worst case O(n²) with bad pivot','Not stable','Recursive stack risk'],uses:["Most languages' built-in sort",'General purpose sorting'],avoid:'When guaranteed worst-case is required',time:'O(n log n)',space:'O(log n)',desc:'Divide-and-conquer: pick a pivot, partition around it, recursively sort both partitions.'},
+  'Sorting:merge_sort':{eli5:"Split the list in half. Sort each half. Merge them like shuffling two sorted card decks. Always guaranteed fast!",pros:['Guaranteed O(n log n)','Stable','Excellent for linked lists'],cons:['O(n) extra memory','Slower constants than quicksort'],uses:['External sort (data > RAM)','Stable sort needs','Standard library sorts'],avoid:'Memory-constrained environments',time:'O(n log n)',space:'O(n)',desc:'Recursively splits the array, sorts each half, and merges them back in sorted order.'},
+  'Sorting:heap_sort':{eli5:"Build a heap (a tree where the top is always the biggest). Keep pulling the top off and placing it at the end. Guaranteed fast with no extra memory!",pros:['Guaranteed O(n log n)','In-place O(1) space','Consistent performance'],cons:['Not stable','Poor cache behavior','Slower than quicksort in practice'],uses:['Real-time / embedded systems','When O(1) space is required'],avoid:'When average-case speed matters most',time:'O(n log n)',space:'O(1)',desc:'Converts the array to a max-heap, then repeatedly extracts the max to produce sorted output.'},
+  'Sorting:shell_sort':{eli5:"Like insertion sort but you compare items far apart first, then closer. Pre-arranging from a distance makes the final pass super fast.",pros:['Much faster than insertion sort','In-place','Simple to implement'],cons:['Not stable','Complex time analysis','Slower than O(n log n) algorithms'],uses:['Embedded systems','Limited memory environments'],avoid:'When a guaranteed complexity is needed',time:'O(n log² n)',space:'O(1)',desc:'A generalization of insertion sort that sorts elements at decreasing gap intervals.'},
+  'Sorting:counting_sort':{eli5:"Count how many times each number appears. Use those counts to place numbers in the right spots. No comparisons needed at all!",pros:['Linear time O(n+k)','Stable','Very fast for small integer ranges'],cons:['Only integers in a known range','Needs O(k) extra memory'],uses:['Integer sorting with small range','Radix sort sub-routine'],avoid:'Floats, strings, or huge value ranges',time:'O(n+k)',space:'O(k)',desc:'Counts occurrences of each value, uses prefix sums to determine sorted positions.'},
+  'Sorting:radix_sort':{eli5:"Sort numbers digit by digit from rightmost to leftmost, using counting sort each time. After all digits, the array is fully sorted!",pros:['Linear O(d·n) for fixed-width ints','Stable'],cons:['Only integers/fixed-length strings','More complex code'],uses:['Phone numbers','IP addresses','Fixed-width integer arrays'],avoid:'Variable-length or floating-point data',time:'O(d·n)',space:'O(n+k)',desc:'Sorts integers by processing individual digits from least to most significant using stable sub-sorts.'},
+  'Sorting:bucket_sort':{eli5:"Scatter numbers into buckets by their range. Sort each small bucket. Pour them all out in order.",pros:['O(n+k) average for uniform data','Parallelizable'],cons:['O(n²) worst case','Needs extra memory','Sensitive to data distribution'],uses:['Uniform distribution floats [0,1)','Distributed sorting'],avoid:'Skewed or clustered data',time:'O(n+k)',space:'O(n)',desc:'Distributes elements into equal-width buckets, sorts each bucket, then concatenates.'},
+  'Sorting:bogo_sort':{eli5:"Shuffle the list randomly. Is it sorted? No? Shuffle again. Repeat until you get lucky. This is a JOKE algorithm — never ever use it!",pros:["It's funny","Terminates... eventually"],cons:['Average O(n·n!) — practically infinite','Randomness-dependent'],uses:['Teaching worst-case algorithms','Comedy'],avoid:'Everything in existence',time:'O(n·n!)',space:'O(1)',desc:'Randomly permutes the array until it happens to be sorted. A joke sorting algorithm.'},
+  'Sorting:gnome_sort':{eli5:"Move forward if items are in order, swap and step back if they're not. Like a garden gnome sorting flower pots.",pros:['Simple code','In-place and stable'],cons:['O(n²) worst case','Slow in practice'],uses:['Teaching','Tiny arrays'],avoid:'Anything real',time:'O(n²)',space:'O(1)',desc:'Moves through the array, swapping adjacent elements and stepping back until the whole array is sorted.'},
+  'Sorting:cocktail_shaker_sort':{eli5:"Like bubble sort but goes back and forth — forward AND backward each pass. Both ends get sorted simultaneously.",pros:['Slightly faster than bubble sort','Handles turtles (small values at end)'],cons:['Still O(n²)','More complex than bubble sort'],uses:['Teaching bidirectional traversal'],avoid:'Large datasets',time:'O(n²)',space:'O(1)',desc:'A bidirectional variant of bubble sort that passes left-to-right then right-to-left each iteration.'},
+  'Sorting:comb_sort':{eli5:"Like bubble sort but instead of comparing neighbours, compare items further apart first, shrinking the gap each pass. Much faster than bubble sort.",pros:['Faster than bubble sort in practice','Simple to implement','In-place'],cons:['Not stable','Complex worst-case analysis'],uses:['When bubble sort is too slow but simplicity matters'],avoid:'Production environments',time:'O(n²)',space:'O(1)',desc:'Improves bubble sort by using a gap > 1 initially, gradually shrinking it to 1.'},
+  'Sorting:cycle_sort':{eli5:"Think of each element as belonging to a cycle. Move each element directly to its correct position, completing cycles one at a time. Minimizes writes!",pros:['Theoretical minimum writes O(n)','In-place'],cons:['O(n²) comparisons','Complex to implement'],uses:['Flash/EEPROM where writes are expensive'],avoid:'General-purpose sorting',time:'O(n²)',space:'O(1)',desc:'Places each element in its correct position directly, minimizing the total number of write operations.'},
+  'Sorting:pancake_sort':{eli5:"You can only flip a prefix of the array (like flipping a stack of pancakes). Repeatedly find the max and flip it to the front, then flip it to its final position.",pros:['Only needs prefix reversal operations','Interesting sorting model'],cons:['O(n²) performance','Not practical'],uses:['Biological sorting models','Theoretical CS'],avoid:'Any real sorting task',time:'O(n²)',space:'O(1)',desc:'Sorts by repeatedly flipping prefixes of the array to move elements to their correct positions.'},
+  'Sorting:wiggle_sort':{eli5:"Rearrange the array so it alternates: small, big, small, big... Like a zigzag line. Not fully sorted, just wiggled!",pros:['O(n) linear time','In-place'],cons:['Not a full sort — just a specific arrangement','Limited use cases'],uses:['Interview problem','Specific data processing patterns'],avoid:'When you need fully sorted output',time:'O(n)',space:'O(1)',desc:'Rearranges the array so nums[0] ≤ nums[1] ≥ nums[2] ≤ nums[3]… in an alternating pattern.'},
+  // SEARCHING
+  'Searching:binary_search':{eli5:"Open a phone book to the middle. Is your name before or after? Throw away half the book. Repeat. You find the name in just log₂(n) steps!",pros:['O(log n) — extremely fast','Simple and well-understood'],cons:['Requires sorted input','Not for linked lists'],uses:['Database indexes','Sorted arrays','Standard library searches'],avoid:'Unsorted collections',time:'O(log n)',space:'O(1)',desc:'Finds a target in a sorted array by halving the search space at each step.'},
+  'Searching:linear_search':{eli5:"Check each item one by one from the start until you find what you want. Simple, but slow for large lists.",pros:['Works on unsorted data','No preprocessing','Simple'],cons:['O(n) worst case','Slow on large data'],uses:['Small unsorted lists','Linked lists','One-off searches'],avoid:'Large datasets or repeated searches',time:'O(n)',space:'O(1)',desc:'Scans each element sequentially until the target is found or the list ends.'},
+  'Searching:jump_search':{eli5:"Instead of checking every element, jump ahead in fixed blocks. When you overshoot, go back and do a linear search in the last block.",pros:['O(√n) — between linear and binary','Works with sequential access'],cons:['Requires sorted input','Worse than binary search'],uses:['Sorted arrays with expensive random access','Magnetic disks'],avoid:'When binary search is available',time:'O(√n)',space:'O(1)',desc:'Jumps ahead by fixed steps, then does a backward linear search in the found block.'},
+  'Searching:interpolation_search':{eli5:"Instead of always checking the middle, estimate where the target should be based on its value — like guessing the page of a word in a dictionary.",pros:['O(log log n) for uniform data','Faster than binary on uniform distributions'],cons:['O(n) worst case on non-uniform data','Complex formula'],uses:['Uniformly distributed sorted arrays','Phone book searches'],avoid:'Non-uniform or small datasets',time:'O(log log n)',space:'O(1)',desc:'Improves binary search by estimating the target position using interpolation on the value range.'},
+  'Searching:exponential_search':{eli5:"Start from index 1, keep doubling (1, 2, 4, 8, 16…) until you exceed the target. Then run binary search in that range.",pros:['Good for unbounded/infinite arrays','O(log n) average'],cons:['Requires sorted input','More complex than binary search'],uses:['Unbounded/infinite sorted arrays','When range is unknown'],avoid:'Bounded arrays where binary search works',time:'O(log n)',space:'O(1)',desc:'Finds range by exponential jumps, then performs binary search within that range.'},
+  'Searching:ternary_search':{eli5:"Like binary search but splits into three parts instead of two. Check two midpoints to decide which third contains your target.",pros:['Works on unimodal functions','O(log₃ n)'],cons:['More comparisons per step than binary search','Not faster overall'],uses:['Finding min/max of unimodal functions','Optimization problems'],avoid:'Standard sorted array searching',time:'O(log n)',space:'O(1)',desc:'Divides the search space into three parts to find a target in a sorted array or min/max of a unimodal function.'},
+  // GRAPH
+  'Graph:dijkstra':{eli5:"Finding shortest path in a city map: always visit the nearest unvisited city, update distances to its neighbours, repeat. Greedily picks the shortest path!",pros:['Optimal for non-negative weights','O((V+E)log V) with heap'],cons:['Fails with negative edges','Memory intensive for large graphs'],uses:['GPS navigation','Network routing','Game pathfinding'],avoid:'Graphs with negative edge weights',time:'O((V+E)log V)',space:'O(V)',desc:"Greedy single-source shortest path algorithm for graphs with non-negative edge weights."},
+  'Graph:bellman_ford':{eli5:"Unlike Dijkstra, this relaxes ALL edges V-1 times. Slower but handles negative weights and detects negative cycles.",pros:['Handles negative edge weights','Detects negative cycles','Simpler implementation'],cons:['O(V·E) — slower than Dijkstra','Not efficient for large sparse graphs'],uses:['Currency arbitrage detection','Network routing with negative costs'],avoid:'Large graphs where Dijkstra suffices',time:'O(V·E)',space:'O(V)',desc:'Computes shortest paths from source by relaxing all edges repeatedly, detecting negative cycles.'},
+  'Graph:a_star':{eli5:"Like Dijkstra but smarter: uses a heuristic to guess which direction to explore first. Like GPS using 'roughly how far is my destination' to guide the search.",pros:['Faster than Dijkstra with good heuristic','Optimal with admissible heuristic'],cons:['Heuristic design is problem-specific','High memory usage'],uses:['Game pathfinding','Robotics','Puzzle solving (8-puzzle)'],avoid:'When no good heuristic exists',time:'O(E)',space:'O(V)',desc:'Best-first search using f(n)=g(n)+h(n); combines actual cost and heuristic to find optimal paths efficiently.'},
+  'Graph:traversal':{eli5:"Visit every node in a graph. BFS uses a queue (level by level), DFS uses a stack (dive deep first). Both eventually visit all reachable nodes.",pros:['Finds all reachable nodes','Builds the foundation for most graph algorithms'],cons:['O(V+E) — must visit all nodes','BFS uses more memory; DFS risks stack overflow'],uses:['Web crawlers','Social network analysis','Component detection'],avoid:'When you only need one path',time:'O(V+E)',space:'O(V)',desc:'BFS explores nodes level by level using a queue. DFS explores as deep as possible before backtracking.'},
+  'Graph:cycle_detection':{eli5:"Walk through the graph. If you visit a node you've already seen in the current path, there's a cycle — like walking in circles!",pros:['Detects cycles in O(V+E)','Works for directed and undirected graphs'],cons:['Different algorithms for directed vs undirected'],uses:['Deadlock detection','Build system dependency checking','Circuit analysis'],avoid:'Trees (they can\'t have cycles by definition)',time:'O(V+E)',space:'O(V)',desc:'Detects cycles in a graph using DFS by tracking currently-visited nodes in the recursion stack.'},
+  'Graph:topological_sort_bfs':{eli5:"In a dependency graph (A must come before B), find an ordering where all dependencies come first. Like ordering tasks in a project!",pros:['Finds valid task ordering','Detects cycles (no valid ordering exists)'],cons:['Only works on DAGs (no cycles)','Multiple valid orderings exist'],uses:['Build systems (make, gradle)','Course prerequisite ordering','Package managers'],avoid:'Graphs with cycles',time:'O(V+E)',space:'O(V)',desc:"Kahn's algorithm: uses in-degree counts and a queue to produce a topological order of a DAG."},
+  'Graph:minimum_spanning_tree':{eli5:"Connect all cities with roads, using as little total road length as possible. Kruskal's picks the cheapest edges; Prim's grows from a starting node.",pros:['Minimum total edge weight','No cycles in result'],cons:['Only for connected undirected graphs','Unique edges required for unique MST'],uses:['Network cable layout','Circuit design','Cluster analysis'],avoid:'Directed graphs or when not all nodes must connect',time:'O(E log E)',space:'O(V)',desc:"Finds the spanning tree with minimum total edge weight using Kruskal's or Prim's algorithm."},
+  'Graph:maximum_flow':{eli5:"Water flowing through pipes with limited capacity. Find the maximum amount of water that can flow from source to sink.",pros:['Optimal solution','Multiple algorithms available'],cons:['Complex to implement','O(V·E²) for Edmonds-Karp'],uses:['Network bandwidth','Job assignment','Baseball elimination problems'],avoid:'When flow network structure doesn\'t apply',time:'O(V·E²)',space:'O(V+E)',desc:'Finds the maximum flow through a flow network from source to sink using augmenting paths.'},
+  // DYNAMIC PROGRAMMING
+  'Dynamic Programming:fibonacci':{eli5:"Instead of recalculating fib(5) over and over in recursion, write answers on sticky notes. fib(10) just looks up fib(9) and fib(8) — already computed!",pros:['Transforms O(2ⁿ) to O(n)','Core DP pattern — memoization'],cons:['Uses extra O(n) memory','Iterative solution is even simpler'],uses:['Teaching memoization','Sequence generation','Golden ratio approximation'],avoid:'When iterative loop suffices',time:'O(n)',space:'O(n)',desc:'Computes Fibonacci numbers using memoization or bottom-up DP, avoiding redundant recursion.'},
+  'Dynamic Programming:knapsack':{eli5:"Your bag fits 5kg. Items have weights and values. What combination gives the most value without exceeding the limit? DP tries all combos efficiently by remembering sub-answers.",pros:['Guaranteed optimal solution','Classic DP pattern'],cons:['O(n·W) — slow for large capacities','Only works for integer weights'],uses:['Resource allocation','Portfolio optimization','Ad selection systems'],avoid:'Continuous weights or huge capacities',time:'O(n·W)',space:'O(n·W)',desc:'Solves 0/1 knapsack: maximize value of items fitting within a weight limit using a 2D DP table.'},
+  'Dynamic Programming:longest_increasing':{eli5:"In the sequence 3,1,4,1,5,9,2,6 — what's the longest subsequence that keeps going up? DP tracks the best ending at each position.",pros:['O(n log n) with patience sorting','Classic interview problem'],cons:['Only subsequence, not substring'],uses:['Stock price trend analysis','Sequence analysis in bioinformatics'],avoid:'When you need contiguous substring',time:'O(n log n)',space:'O(n)',desc:'Finds the length of the longest strictly increasing subsequence using dynamic programming.'},
+  'Dynamic Programming:coin_change':{eli5:"Given coins of value 1, 5, 10 and a target amount, what's the minimum number of coins to make it? DP builds up from amount=0.",pros:['Guaranteed optimal','Classic DP template'],cons:['O(n·amount) time and space'],uses:['Vending machines','Currency exchange','Resource allocation'],avoid:'When amount is astronomically large',time:'O(n·amount)',space:'O(amount)',desc:'Finds minimum number of coins to make a target amount using bottom-up dynamic programming.'},
+  'Dynamic Programming:edit_distance':{eli5:"How many insertions, deletions, or substitutions to turn 'kitten' into 'sitting'? DP fills a grid of sub-problem answers.",pros:['Exact optimal solution','Works for any string pair'],cons:['O(m·n) time and space'],uses:['Spell checkers','DNA sequence alignment','Diff tools'],avoid:'Very long strings without approximation',time:'O(m·n)',space:'O(m·n)',desc:'Computes the Levenshtein distance: minimum edit operations to transform one string into another.'},
+  'Dynamic Programming:max_subarray':{eli5:"Find the contiguous sub-array with the largest sum. Kadane's algorithm: at each step, decide to extend the current sub-array or start fresh.",pros:['O(n) linear time','Classic Kadane\'s algorithm'],cons:['Only contiguous sub-arrays'],uses:['Stock profit maximization','Signal processing','Image analysis'],avoid:'Non-contiguous subset problems',time:'O(n)',space:'O(1)',desc:"Kadane's algorithm: finds the maximum sum contiguous sub-array in linear time."},
+  'Dynamic Programming:climbing_stairs':{eli5:"You can take 1 or 2 steps at a time. How many ways to reach step n? It's just the Fibonacci sequence! Each step's count = sum of previous two.",pros:['O(n) simple DP','Teaches DP fundamentals'],cons:['Limited to this specific problem type'],uses:['Teaching DP basics','Interview warmup'],avoid:'When you actually need to climb stairs',time:'O(n)',space:'O(1)',desc:'Counts distinct ways to climb n stairs taking 1 or 2 steps at a time — equivalent to Fibonacci.'},
+  // TREE
+  'Tree:traversal_inorder':{eli5:"Visit left child, then current node, then right child. For a Binary Search Tree, this visits nodes in perfectly sorted order — like reading left to right!",pros:['Produces sorted output for BST','Simple recursion'],cons:['O(h) stack space for deep trees'],uses:['Getting sorted output from BST','Expression tree evaluation','BST validation'],avoid:'When level-order (BFS) traversal is needed',time:'O(n)',space:'O(h)',desc:'Recursively visits left subtree → root → right subtree. Produces sorted order for BSTs.'},
+  'Tree:traversal_level_order':{eli5:"Visit all nodes floor by floor — all root's children first, then their children. Uses a queue to track who's next.",pros:['Finds shortest path in unweighted trees','Intuitive level-by-level view'],cons:['O(w) memory where w = max width'],uses:['Finding minimum depth','Serializing trees','Level-by-level processing'],avoid:'Deep narrow trees (DFS is better)',time:'O(n)',space:'O(w)',desc:'BFS-based traversal visiting nodes level by level using a queue.'},
+  'Tree:traversal_preorder':{eli5:"Visit the current node first, then left, then right. Great for copying or printing the tree structure from top to bottom.",pros:['Good for tree serialization','Simple recursion'],cons:['Not sorted output'],uses:['Tree serialization','Directory listing','Expression prefix notation'],avoid:'When sorted output is needed',time:'O(n)',space:'O(h)',desc:'Recursively visits root → left → right. Used for tree serialization and copying.'},
+  'Tree:traversal_postorder':{eli5:"Visit left child, then right child, then the current node. Like cleaning up — children before parents. Perfect for deleting trees or evaluating expressions.",pros:['Correct order for deleting trees','Expression evaluation'],cons:['Less intuitive','Not sorted'],uses:['Deleting trees','Postfix expression evaluation','Directory size calculation'],avoid:'When pre/in-order is needed',time:'O(n)',space:'O(h)',desc:'Recursively visits left → right → root. Used for deletion and postfix expression evaluation.'},
+  'Tree:invert_tree':{eli5:"Swap every left and right child in the entire tree. The mirror image of the original tree!",pros:['O(n) — visits every node once','Clean recursive solution'],cons:['Modifies tree in place'],uses:['Mirroring data structures','Symmetry checking','Interview classic'],avoid:'When original tree must be preserved',time:'O(n)',space:'O(h)',desc:'Recursively swaps the left and right children of every node to produce the mirror image of the tree.'},
+  'Tree:max_height':{eli5:"How many floors does the tree have? Recursively find the height of left and right subtrees, return the bigger one plus one for the current node.",pros:['Simple O(n) recursion','Foundation for many tree algorithms'],cons:['Recursive — O(h) stack for deep trees'],uses:['Balancing checks','Tree analysis'],avoid:'Extremely deep unbalanced trees (stack overflow)',time:'O(n)',space:'O(h)',desc:'Recursively computes tree height as 1 + max(left_height, right_height).'},
+  'Tree:is_balanced':{eli5:"A tree is balanced if left and right subtrees differ in height by at most 1, for every node. Check recursively!",pros:['O(n) with height caching','Important property for BST performance'],cons:['Multiple definitions of "balanced"'],uses:['AVL tree validation','Performance analysis','Rebalancing triggers'],avoid:'When approximate balance suffices',time:'O(n)',space:'O(h)',desc:'Checks if every node\'s left and right subtree heights differ by at most 1.'},
+  // LINKED LIST
+  'Linked List:reverse':{eli5:"Walk through the chain, and for each node, flip its arrow to point backward instead of forward. Use three pointers: prev, curr, next.",pros:['O(n) time, O(1) space','Classic pointer manipulation'],cons:['Modifies original list','Easy to get pointer order wrong'],uses:['Palindrome checks','Undo operations','List manipulation algorithms'],avoid:'Arrays (just use two-pointer in place)',time:'O(n)',space:'O(1)',desc:'Iteratively reverses a singly linked list by redirecting next pointers from head to tail.'},
+  'Linked List:is_cyclic':{eli5:"Use two pointers — a slow one (moves 1 step) and a fast one (moves 2 steps). If there's a cycle, fast catches up to slow. Like a rabbit catching a tortoise running in a loop!",pros:['O(n) time, O(1) space','Elegant Floyd\'s algorithm'],cons:['Only detects cycles, doesn\'t find cycle start without extra steps'],uses:['Linked list validation','Deadlock detection','Detecting infinite loops'],avoid:'When you also need cycle length',time:'O(n)',space:'O(1)',desc:"Floyd's cycle detection: uses slow and fast pointers — if they meet, a cycle exists."},
+  'Linked List:merge_two_list':{eli5:"Given two sorted chains, merge them into one sorted chain. Compare the fronts, pick the smaller, advance that pointer. Like merging two sorted card hands.",pros:['O(n+m) time, O(1) space','Stable merge'],cons:['Modifies original lists'],uses:['Merge sort for linked lists','Combining sorted streams'],avoid:'Random-access structures',time:'O(n+m)',space:'O(1)',desc:'Merges two sorted linked lists by comparing head nodes and linking the smaller one each step.'},
+  // STACK
+  'Stack:valid_parenthesis':{eli5:"Use a stack. When you see an opening bracket, push it. When you see a closing bracket, check the top of the stack matches. If not, it's invalid!",pros:['O(n) time and space','Classic stack application'],cons:['Only for bracket matching'],uses:['Code editors — syntax highlighting','Expression parsing','Compiler design'],avoid:'Non-bracket validation problems',time:'O(n)',space:'O(n)',desc:'Uses a stack to verify that every opening bracket has a matching closing bracket in the correct order.'},
+  'Stack:is_sorted':{eli5:"Use a helper stack to check if the main stack is sorted. Transfer elements while maintaining order — if we ever need to put an element out of order, it's unsorted.",pros:['O(n) check','Elegant stack usage'],cons:['O(n) extra space'],uses:['Stack validation','Data structure integrity checks'],avoid:'Arrays where a simple loop suffices',time:'O(n)',space:'O(n)',desc:'Checks if a stack is sorted by transferring elements to a helper stack while verifying order.'},
+  // STRING
+  'String:knuth_morris_pratt':{eli5:"Search for a word inside text without backtracking. Build a 'failure function' table that tells you how far to skip when a mismatch happens.",pros:['O(n+m) linear time','No backtracking in text'],cons:['Preprocessing required for pattern','Complex failure function'],uses:['Text editors (Ctrl+F)','DNA pattern matching','Log file searching'],avoid:'Single short searches (indexOf is fine)',time:'O(n+m)',space:'O(m)',desc:'Linear-time string pattern search using a failure function to avoid redundant character comparisons.'},
+  'String:rabin_karp':{eli5:"Compute a hash of your search pattern. Slide a window through the text and compare hashes — only do a full comparison when hashes match!",pros:['O(n+m) average','Finds multiple patterns simultaneously'],cons:['O(n·m) worst case with many hash collisions','Requires good hash function'],uses:['Plagiarism detection','Multiple pattern search','Bioinformatics'],avoid:'Single pattern search (KMP is better)',time:'O(n+m)',space:'O(1)',desc:'Uses rolling hash to compare pattern and text substrings efficiently without full character comparison.'},
+  'String:is_palindrome':{eli5:"Check if a string reads the same forward and backward. Use two pointers: one from start, one from end, move toward the middle.",pros:['O(n) time, O(1) space','Simple two-pointer approach'],cons:['Need to handle case and non-alpha chars for real words'],uses:['Input validation','Bioinformatics','Interview classic'],avoid:'Nothing — it\'s always simple',time:'O(n)',space:'O(1)',desc:'Uses two pointers from both ends, checking if characters match, moving inward until they meet.'},
+  // ARRAY
+  'Array:two_sum':{eli5:"Find two numbers in an array that add up to a target. Use a hash map: for each number, check if (target - number) is already in the map.",pros:['O(n) with hash map','Classic problem'],cons:['O(n) extra space','Returns indices, not values by default'],uses:['Sum problems','Pair finding','Interview standard'],avoid:'When O(n log n) sorting solution is preferred',time:'O(n)',space:'O(n)',desc:'Uses a hash map to find two indices whose values sum to the target in a single pass.'},
+  'Array:move_zeros':{eli5:"Move all zeros in an array to the end, keeping non-zero elements in order. Use two pointers: one writes non-zeros, the other scans.",pros:['O(n) time, O(1) space','Stable ordering of non-zeros'],cons:['Modifies in place'],uses:['Array cleanup','Data preprocessing','Interview staple'],avoid:'When original order of zeros matters',time:'O(n)',space:'O(1)',desc:'Two-pointer technique: writes non-zero elements forward, then fills the rest with zeros.'},
+  'Array:merge_intervals':{eli5:"Given a list of time intervals, merge all overlapping ones. Sort by start time, then greedily extend the last merged interval when overlap occurs.",pros:['O(n log n) — sort dominates','Clean greedy approach'],cons:['Requires sorting first'],uses:['Calendar merging','File version ranges','Network bandwidth aggregation'],avoid:'Non-overlapping interval problems',time:'O(n log n)',space:'O(n)',desc:'Sorts intervals by start time, then merges overlapping ones by extending the end of the last merged interval.'},
+  // BACKTRACKING
+  'Backtracking:permute':{eli5:"Generate all possible orderings of a list. Fix one element, recurse on the rest, then backtrack (undo the choice) and try another.",pros:['Generates all solutions','General technique'],cons:['O(n!) — explodes fast','Not suitable for large n'],uses:['Combinatorics','Scheduling problems','Testing all orderings'],avoid:'n > ~10 without pruning',time:'O(n!)',space:'O(n)',desc:'Generates all permutations by swapping elements and recursing, then swapping back to backtrack.'},
+  'Backtracking:subsets':{eli5:"Generate all possible subsets of a set. At each element, you make a choice: include it or don't. Two choices per element → 2ⁿ subsets total.",pros:['Generates all 2ⁿ subsets','Clean recursive structure'],cons:['Exponential output size'],uses:['Power set generation','Feature selection','Combinatorial problems'],avoid:'Large sets without filtering',time:'O(2ⁿ)',space:'O(n)',desc:'Recursively builds all subsets by choosing to include or exclude each element.'},
+  // MATH
+  'Math:prime_check':{eli5:"Is a number prime? Check if anything from 2 to √n divides it. If nothing does, it's prime! Only go to √n because factors come in pairs.",pros:['O(√n) — much faster than O(n)','Simple to implement'],cons:['Slow for very large numbers'],uses:['Cryptography basics','RSA key generation','Math puzzles'],avoid:'Very large primes (use Miller-Rabin)',time:'O(√n)',space:'O(1)',desc:'Tests primality by checking divisibility up to √n, exploiting that factors come in pairs.'},
+  'Math:fibonacci':{eli5:"Each number is the sum of the two before it: 0,1,1,2,3,5,8,13… Can be computed iteratively in O(n) or with the golden ratio formula in O(1)!",pros:['O(1) with Binet\'s formula','O(n) iterative is simple'],cons:['Binet\'s formula has floating point errors for large n'],uses:['Mathematical sequences','Golden ratio approximation','DP teaching'],avoid:'Large n without matrix exponentiation',time:'O(n)',space:'O(1)',desc:'Generates the nth Fibonacci number using iteration or memoization.'},
+  'Math:gcd':{eli5:"Euclid's algorithm: gcd(a,b) = gcd(b, a mod b). Keep reducing until b=0. The last non-zero value is the GCD. Incredibly elegant!",pros:['O(log(min(a,b))) — very fast','Ancient algorithm (300 BC)'],cons:['Only for integers'],uses:['Fraction simplification','RSA cryptography','Solving linear Diophantine equations'],avoid:'Real numbers',time:'O(log n)',space:'O(1)',desc:"Euclid's algorithm: recursively computes gcd(a,b) = gcd(b, a%b) until b=0."},
+  // MATRIX
+  'Matrix:spiral_traversal':{eli5:"Traverse a matrix in a spiral: go right, then down, then left, then up, shrinking the boundary each time until all cells are visited.",pros:['O(m·n) visits every cell once','Elegant boundary tracking'],cons:['Off-by-one errors are common','4 direction pointers to manage'],uses:['Matrix printing','Image processing','Interview problem'],avoid:'When row/column order matters more',time:'O(m·n)',space:'O(1)',desc:'Traverses a 2D matrix in spiral order by maintaining top/bottom/left/right boundaries.'},
+  'Matrix:rotate_image':{eli5:"Rotate a matrix 90° clockwise in-place: first transpose (flip along the diagonal), then reverse each row. No extra matrix needed!",pros:['O(n²) in-place','Elegant two-step approach'],cons:['Only square matrices'],uses:['Image rotation','Game board manipulation','Computer graphics'],avoid:'Non-square matrices',time:'O(n²)',space:'O(1)',desc:'Rotates an n×n matrix 90° clockwise by first transposing it, then reversing each row.'},
+  // HEAP
+  'Heap:sliding_window_max':{eli5:"Find the maximum in each sliding window of size k. Use a deque to store indices, keeping only useful (potentially max) values in decreasing order.",pros:['O(n) linear time','Elegant deque usage'],cons:['Complex deque management'],uses:['Stock price windows','Network buffer analysis','Any sliding maximum problem'],avoid:'When k is 1 or equals n',time:'O(n)',space:'O(k)',desc:'Uses a monotonic deque to track maximum elements within a sliding window of size k in O(n).'},
+  // COMPRESSION
+  'Compression:huffman_coding':{eli5:"Give shorter codes to frequent characters and longer codes to rare ones. Build a binary tree by merging the two least-frequent nodes repeatedly.",pros:['Optimal prefix-free code','Real compression used everywhere'],cons:['Need two passes (build tree then encode)','Overhead for storing tree'],uses:['ZIP files','JPEG, PNG compression','MP3 encoding'],avoid:'When all characters have equal frequency',time:'O(n log n)',space:'O(n)',desc:'Builds an optimal prefix-free binary code by constructing a Huffman tree from character frequencies.'},
+  'Compression:rle_compression':{eli5:"'AAABBBCCCC' becomes '3A3B4C'. Count consecutive identical characters and replace them with count + character. Simple run-length encoding!",pros:['O(n) simple','Great for repetitive data'],cons:['Can EXPAND data if little repetition (ABCD → 1A1B1C1D)'],uses:['BMP images','Fax transmission','Simple data compression'],avoid:'Random data with little repetition',time:'O(n)',space:'O(n)',desc:'Encodes runs of consecutive identical characters as (count, character) pairs.'},
+};
+
+function getInfo(cat, alg) {
+  const key = `${cat}:${alg}`;
+  if (ELI5[key]) return ELI5[key];
+  // Smart defaults per category
+  const defaults = {
+    'Sorting':{time:'O(n²)',space:'O(1)'},
+    'Searching':{time:'O(log n)',space:'O(1)'},
+    'Graph':{time:'O(V+E)',space:'O(V)'},
+    'Dynamic Programming':{time:'O(n²)',space:'O(n)'},
+    'Tree':{time:'O(n)',space:'O(h)'},
+    'Linked List':{time:'O(n)',space:'O(1)'},
+    'String':{time:'O(n)',space:'O(n)'},
+    'Array':{time:'O(n)',space:'O(1)'},
+    'Backtracking':{time:'O(2ⁿ)',space:'O(n)'},
+    'Math':{time:'O(√n)',space:'O(1)'},
+    'Matrix':{time:'O(n²)',space:'O(1)'},
+    'Stack':{time:'O(n)',space:'O(n)'},
+    'Heap':{time:'O(n log n)',space:'O(n)'},
+    'Compression':{time:'O(n log n)',space:'O(n)'},
+    'Bit Manipulation':{time:'O(1)',space:'O(1)'},
+    'Map':{time:'O(n)',space:'O(n)'},
+    'Queue':{time:'O(n)',space:'O(n)'},
+  };
+  const d = defaults[cat] || {time:'O(n)',space:'O(1)'};
+  return {
+    eli5:`This is a ${cat} algorithm. Step through the animation to see how it processes data towards the solution.`,
+    pros:['Elegant and well-studied','Clear problem decomposition'],
+    cons:['Check complexity before scaling','May have edge cases'],
+    uses:['Competitive programming','System design','Core CS education'],
+    avoid:'When a simpler built-in function already solves it',
+    desc:`A ${cat} algorithm that demonstrates key computer science concepts. See the Code tab for the original Python implementation from keon/algorithms.`,
+    time:d.time, space:d.space
+  };
+}
+
+// ─── VIS ENGINE ───
+const VIS = {
+  // Each renderer: draw(ctx, state, W, H, dark) → void
+  // step(state) → void (mutates state, returns false when done)
+};
+
+createApp({
+  setup() {
+    const light = ref(false);
+    const drawerOpen = ref(false);
+    const q = ref('');
+    const ex = reactive({});
+    const selCat = ref(null);
+    const sel = ref(null);
+    const tab = ref('Visualize');
+    const code = ref('');
+    const speed = ref(400);
+    const playing = ref(false);
+    const stepN = ref(0);
+    const cvs = ref(null);
+    const canInstall = ref(false);
+    let deferredPrompt = null;
+    let ctx = null;
+    let raf = null;
+    let lastTime = 0;
+    let visState = {};
+    let catGroup = ref('');
+
+    // PWA install
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      canInstall.value = true;
+    });
+    function installPWA() {
+      if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt = null; canInstall.value = false; }
+    }
+
+    const filtered = computed(() => {
+      if (!q.value) return ALGS;
+      const qv = q.value.toLowerCase();
+      const r = {};
+      for (const [cat, algs] of Object.entries(ALGS)) {
+        const f = algs.filter(a => a.includes(qv) || cat.toLowerCase().includes(qv));
+        if (f.length) r[cat] = f;
+      }
+      return r;
+    });
+
+    const info = computed(() => getInfo(selCat.value, sel.value));
+    const tabs = computed(() => ['Visualize','Code','Info']);
+
+    function fmt(s) { return s.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()); }
+
+    function toggleCat(cat) { ex[cat] = !ex[cat]; }
+
+    function onSearch() {
+      if (q.value) for (const c of Object.keys(filtered.value)) ex[c] = true;
+    }
+
+    async function pick(cat, alg) {
+      selCat.value = cat;
+      sel.value = alg;
+      tab.value = 'Visualize';
+      playing.value = false;
+      cancelAnimationFrame(raf);
+      stepN.value = 0;
+      drawerOpen.value = false;
+      catGroup.value = cat;
+
+      const folder = cat.toLowerCase().replace(/\s+/g,'_');
+      const url = `https://raw.githubusercontent.com/keon/algorithms/main/algorithms/${folder}/${alg}.py`;
+      fetch(url).then(r=>r.text()).then(t=>{ code.value=t; }).catch(()=>{ code.value=`# Could not fetch ${alg}.py\n# Visit: https://github.com/keon/algorithms`; });
+
+      await nextTick();
+      initCanvas();
+      buildState(cat, alg);
+      draw();
+      // autoplay
+      setTimeout(() => { playing.value = true; loopAnim(); }, 200);
+    }
+
+    function initCanvas() {
+      if (!cvs.value) return;
+      ctx = cvs.value.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      cvs.value.width = cvs.value.offsetWidth * dpr;
+      cvs.value.height = 360 * dpr;
+      ctx.scale(dpr, dpr);
+    }
+
+    // ─── STATE BUILDERS per category ───
+    function buildState(cat, alg) {
+      const n = 24;
+      const arr = Array.from({length:n}, () => Math.floor(Math.random()*280)+30);
+      const sorted = () => Array.from({length:n}, (_,i) => Math.round(30 + (i/n)*280));
+      visState = {
+        cat, alg, done: false, step: 0,
+        arr: [...arr],
+        hi: [], special: [],
+        // sorting
+        si: 0, sj: 0, sStack: [], sGap: Math.floor(n/2),
+        // searching
+        target: arr[Math.floor(Math.random()*n)], lo: 0, mid: -1, high: n-1, found: -1,
+        searchArr: [...arr].sort((a,b)=>a-b),
+        searchStep: 0,
+        // graph
+        nodes: buildGraphNodes(), edges: [], visitQueue: [], visitedSet: new Set(),
+        graphStep: 0, graphPath: [],
+        // tree
+        treeNodes: buildTree(), treeStep: 0, treeQueue: [], treeVisited: [],
+        // LL
+        llNodes: buildLL(8), llStep: 0, llActive: 0,
+        // dp
+        dpTable: [], dpStep: 0, dpN: 8,
+        // array
+        arrI: 0, arrJ: 1, arrSwaps: 0,
+        // stack
+        stackArr: [], stackStep: 0,
+        // string
+        strS: randomStr(12), strP: randomStr(4), strI: 0, strJ: 0, strMatches: [],
+        // matrix
+        matData: buildMat(6), matI: 0, matJ: 0, matVisited: [],
+        // bit
+        bitNum: Math.floor(Math.random()*255)+1, bitStep: 0,
+        // backtrack
+        btArr: [1,2,3,4], btResult: [], btStep: 0, btCurrent: [],
+        // math
+        mathN: Math.floor(Math.random()*50)+10, mathStep: 0, mathPrimes: [], mathCurrent: 2,
+        // heap
+        heapArr: [...arr], heapSize: n, heapI: Math.floor(n/2)-1,
+        // compression
+        compStr: 'AAABBCCCCDDDDDEEEEE', compI: 0, compResult: [],
+        // map/hash
+        hashKeys: Array.from({length:8}, () => randomStr(3)), hashI: 0, hashMap: {},
+      };
+      // init edges for graph
+      const gn = visState.nodes;
+      for (let i=0;i<gn.length;i++) {
+        const nc = 1+Math.floor(Math.random()*2);
+        for (let k=0;k<nc;k++) {
+          const t = (i+1+Math.floor(Math.random()*3))%gn.length;
+          if (t!==i) visState.edges.push({from:i,to:t,w:Math.floor(Math.random()*9)+1,hi:false});
+        }
+      }
+      visState.visitQueue = [0];
+      visState.visitedSet.add(0);
+      // init dp table
+      const dpN = visState.dpN;
+      visState.dpTable = Array.from({length:dpN+1}, (_,i)=>i);
+      // init heap
+      for (let i=Math.floor(n/2)-1;i>=0;i--) heapifyDown(visState.heapArr, n, i);
+    }
+
+    function randomStr(n) {
+      const chars = 'abcdefghij';
+      return Array.from({length:n}, ()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+    }
+
+    function buildGraphNodes() {
+      const n = 9;
+      return Array.from({length:n}, (_,i) => ({
+        x: 80 + (i%3)*220, y: 60 + Math.floor(i/3)*100,
+        label: String.fromCharCode(65+i),
+        visited: false, active: false, inPath: false,
+        dist: Infinity
+      }));
+    }
+
+    function buildTree() {
+      const vals = [50,30,70,20,40,60,80,10,25,35,45];
+      return vals.map((v,i) => ({
+        v, visited: false, active: false,
+        left: 2*i+1 < vals.length ? 2*i+1 : -1,
+        right: 2*i+2 < vals.length ? 2*i+2 : -1
+      }));
+    }
+
+    function buildLL(n) {
+      return Array.from({length:n}, (_,i) => ({val:Math.floor(Math.random()*90)+10, active:false, visited:false}));
+    }
+
+    function buildMat(n) {
+      return Array.from({length:n}, ()=>Array.from({length:n}, ()=>Math.floor(Math.random()*9)+1));
+    }
+
+    function heapifyDown(arr, n, i) {
+      let lg=i,l=2*i+1,r=2*i+2;
+      if(l<n&&arr[l]>arr[lg])lg=l;
+      if(r<n&&arr[r]>arr[lg])lg=r;
+      if(lg!==i){ [arr[i],arr[lg]]=[arr[lg],arr[i]]; heapifyDown(arr,n,lg); }
+    }
+
+    // ─── STEP LOGIC ───
+    function doStep() {
+      if (!sel.value || visState.done) { playing.value = false; return; }
+      stepN.value++;
+      const s = visState;
+      const cat = s.cat;
+      const alg = s.alg;
+
+      if (cat === 'Sorting') stepSort(s, alg);
+      else if (cat === 'Searching') stepSearch(s, alg);
+      else if (cat === 'Graph') stepGraph(s, alg);
+      else if (cat === 'Tree') stepTree(s, alg);
+      else if (cat === 'Linked List') stepLL(s, alg);
+      else if (cat === 'Dynamic Programming') stepDP(s, alg);
+      else if (cat === 'Array') stepArray(s, alg);
+      else if (cat === 'Stack') stepStack(s, alg);
+      else if (cat === 'String') stepString(s, alg);
+      else if (cat === 'Matrix') stepMatrix(s, alg);
+      else if (cat === 'Bit Manipulation') stepBit(s, alg);
+      else if (cat === 'Backtracking') stepBacktrack(s, alg);
+      else if (cat === 'Math') stepMath(s, alg);
+      else if (cat === 'Heap') stepHeap(s, alg);
+      else if (cat === 'Compression') stepCompression(s, alg);
+      else if (cat === 'Map') stepMap(s, alg);
+      else if (cat === 'Greedy') stepGreedy(s, alg);
+      else if (cat === 'Queue') stepQueue(s, alg);
+      else { s.hi = [(s.step++) % s.arr.length]; if(s.step > s.arr.length*3) s.done=true; }
+
+      draw();
+    }
+
+    // SORT
+    function stepSort(s, alg) {
+      const a = s.arr, n = a.length;
+      if (alg==='bubble_sort'||alg==='exchange_sort') {
+        if(s.si<n){ if(s.sj<n-s.si-1){ s.hi=[s.sj,s.sj+1]; if(a[s.sj]>a[s.sj+1]){[a[s.sj],a[s.sj+1]]=[a[s.sj+1],a[s.sj]];} s.sj++; } else{s.sj=0;s.si++;} } else s.done=true;
+      } else if(alg==='insertion_sort') {
+        if(s.si===0) s.si=1;
+        if(s.si<n){ let k=a[s.si],j=s.si-1; s.hi=[s.si]; while(j>=0&&a[j]>k){a[j+1]=a[j];j--;} a[j+1]=k; s.si++; } else s.done=true;
+      } else if(alg==='selection_sort') {
+        if(s.si<n-1){ let mn=s.si; for(let k=s.si+1;k<n;k++) if(a[k]<a[mn])mn=k; s.hi=[s.si,mn]; if(mn!==s.si)[a[s.si],a[mn]]=[a[mn],a[s.si]]; s.si++; } else s.done=true;
+      } else if(alg==='quick_sort') {
+        if(!s.sStack.length) s.sStack=[[0,n-1]];
+        if(s.sStack.length){ const [lo,hi]=s.sStack.pop(); if(lo<hi){ const pv=a[hi]; let p=lo; for(let k=lo;k<hi;k++) if(a[k]<=pv){[a[k],a[p]]=[a[p],a[k]];p++;} [a[p],a[hi]]=[a[hi],a[p]]; s.hi=[p,hi]; s.sStack.push([lo,p-1],[p+1,hi]); } } else s.done=true;
+      } else if(alg==='merge_sort') {
+        if(!s.mWidth) s.mWidth=1;
+        if(s.mWidth<n){ for(let k=0;k<n;k+=s.mWidth*2){ const l=k,m=Math.min(k+s.mWidth-1,n-1),r=Math.min(k+s.mWidth*2-1,n-1); if(m<r){ const L=a.slice(l,m+1),R=a.slice(m+1,r+1); let i=0,j=0,idx=l; while(i<L.length&&j<R.length)a[idx++]=(L[i]<=R[j])?L[i++]:R[j++]; while(i<L.length)a[idx++]=L[i++]; while(j<R.length)a[idx++]=R[j++]; } } s.hi=[s.mWidth%n]; s.mWidth*=2; } else s.done=true;
+      } else if(alg==='heap_sort') {
+        if(!s.heapInit){ for(let k=Math.floor(n/2)-1;k>=0;k--) heapifyDown(a,n,k); s.heapInit=true; s.hk=n-1; }
+        if(s.hk>0){ [a[0],a[s.hk]]=[a[s.hk],a[0]]; s.hi=[0,s.hk]; heapifyDown(a,s.hk,0); s.hk--; } else s.done=true;
+      } else if(alg==='shell_sort') {
+        if(s.sGap>0){ if(s.shI===undefined)s.shI=s.sGap; if(s.shI<n){ let t=a[s.shI],j=s.shI; s.hi=[s.shI]; while(j>=s.sGap&&a[j-s.sGap]>t){a[j]=a[j-s.sGap];j-=s.sGap;} a[j]=t; s.shI++; } else{s.sGap=Math.floor(s.sGap/2);s.shI=s.sGap;} } else s.done=true;
+      } else if(alg==='counting_sort') {
+        if(!s.csDone){ const mx=Math.max(...a),mn=Math.min(...a),cnt=new Array(mx-mn+1).fill(0); a.forEach(v=>cnt[v-mn]++); let idx=0; cnt.forEach((c,i)=>{while(c>0)a[idx++]=i+mn;}); s.hi=[0,n-1]; s.csDone=true; s.done=true; }
+      } else if(alg==='gnome_sort'||alg==='cocktail_shaker_sort') {
+        if(s.gi===undefined)s.gi=1;
+        if(s.gi<n){ s.hi=[s.gi-1,s.gi]; if(s.gi===0||a[s.gi]>=a[s.gi-1])s.gi++; else{[a[s.gi],a[s.gi-1]]=[a[s.gi-1],a[s.gi]];s.gi--;} } else s.done=true;
+      } else if(alg==='wiggle_sort') {
+        if(s.wi===undefined)s.wi=0;
+        if(s.wi<n-1){ s.hi=[s.wi,s.wi+1]; const e=s.wi%2===0; if((e&&a[s.wi]>a[s.wi+1])||(!e&&a[s.wi]<a[s.wi+1]))[a[s.wi],a[s.wi+1]]=[a[s.wi+1],a[s.wi]]; s.wi++; } else s.done=true;
+      } else {
+        // fallback bubble
+        if(s.si<n){ if(s.sj<n-s.si-1){s.hi=[s.sj,s.sj+1];if(a[s.sj]>a[s.sj+1])[a[s.sj],a[s.sj+1]]=[a[s.sj+1],a[s.sj]];s.sj++;} else{s.sj=0;s.si++;} } else s.done=true;
+      }
+    }
+
+    // SEARCH
+    function stepSearch(s, alg) {
+      const a = s.searchArr;
+      if(alg==='binary_search'||alg==='find_min_rotate'||alg==='search_insert'||alg==='search_range'||alg==='search_rotate'||alg==='first_occurrence'||alg==='last_occurrence'||alg==='next_greatest_letter') {
+        if(s.lo<=s.high&&s.found===-1){ s.mid=Math.floor((s.lo+s.high)/2); s.hi=[s.mid]; s.special=[s.lo,s.high]; if(a[s.mid]===s.target){s.found=s.mid;s.done=true;} else if(a[s.mid]<s.target)s.lo=s.mid+1; else s.high=s.mid-1; } else s.done=true;
+      } else if(alg==='linear_search'||alg==='two_sum') {
+        if(s.searchStep<a.length){ s.hi=[s.searchStep]; if(a[s.searchStep]===s.target){s.found=s.searchStep;s.done=true;} s.searchStep++; } else s.done=true;
+      } else if(alg==='jump_search') {
+        if(!s.jsBlock)s.jsBlock=Math.floor(Math.sqrt(a.length));
+        if(s.searchStep<a.length){ s.hi=[Math.min(s.searchStep,a.length-1)]; if(a[Math.min(s.searchStep,a.length-1)]>=s.target){s.found=s.searchStep;s.done=true;} s.searchStep+=s.jsBlock; } else s.done=true;
+      } else if(alg==='ternary_search') {
+        if(s.lo<s.high){ const t1=Math.floor(s.lo+(s.high-s.lo)/3),t2=Math.floor(s.high-(s.high-s.lo)/3); s.hi=[t1,t2]; s.special=[s.lo,s.high]; if(a[t1]===s.target){s.found=t1;s.done=true;} else if(a[t2]===s.target){s.found=t2;s.done=true;} else if(s.target<a[t1])s.high=t1-1; else if(s.target>a[t2])s.lo=t2+1; else{s.lo=t1+1;s.high=t2-1;} } else s.done=true;
+      } else {
+        if(s.lo<=s.high&&s.found===-1){ s.mid=Math.floor((s.lo+s.high)/2); s.hi=[s.mid]; if(a[s.mid]===s.target)s.done=true; else if(a[s.mid]<s.target)s.lo=s.mid+1; else s.high=s.mid-1; } else s.done=true;
+      }
+    }
+
+    // GRAPH
+    function stepGraph(s, alg) {
+      const nodes = s.nodes;
+      if(s.visitQueue.length===0){s.done=true;return;}
+      const curr = s.visitQueue.shift();
+      nodes[curr].visited = true; nodes[curr].active = true;
+      s.hi = [curr]; s.graphStep++;
+      // find edges from curr
+      const neighbours = s.edges.filter(e=>e.from===curr).map(e=>e.to);
+      for(const nb of neighbours){
+        if(!s.visitedSet.has(nb)){
+          s.visitedSet.add(nb);
+          s.visitQueue.push(nb);
+          nodes[nb].active = false;
+        }
+        // highlight edge
+        const e = s.edges.find(e=>e.from===curr&&e.to===nb);
+        if(e) e.hi = true;
+      }
+      if(s.visitQueue.length===0 && s.visitedSet.size < nodes.length) s.done=true;
+    }
+
+    // TREE
+    function stepTree(s, alg) {
+      const nodes = s.treeNodes;
+      if(s.treeStep===0) s.treeQueue=[0];
+      if(s.treeQueue.length===0){s.done=true;return;}
+      let idx;
+      if(alg==='traversal_inorder'||alg==='traversal_preorder'||alg==='traversal_postorder'||alg==='bst_is_bst'||alg==='bst_height'||alg==='is_balanced'||alg==='is_symmetric'||alg==='is_subtree'||alg==='same_tree'||alg==='invert_tree') {
+        idx = s.treeQueue.shift();
+        nodes[idx].visited=true; nodes[idx].active=true;
+        if(nodes[idx].right>=0&&!nodes[nodes[idx].right].visited) s.treeQueue.push(nodes[idx].right);
+        if(nodes[idx].left>=0&&!nodes[nodes[idx].left].visited) s.treeQueue.push(nodes[idx].left);
+      } else {
+        idx = s.treeQueue.shift();
+        nodes[idx].visited=true; nodes[idx].active=true;
+        if(nodes[idx].left>=0&&!nodes[nodes[idx].left].visited) s.treeQueue.push(nodes[idx].left);
+        if(nodes[idx].right>=0&&!nodes[nodes[idx].right].visited) s.treeQueue.push(nodes[idx].right);
+      }
+      s.treeVisited.push(idx);
+      s.hi=[idx]; s.treeStep++;
+      if(s.treeQueue.length===0) s.done=true;
+    }
+
+    // LINKED LIST
+    function stepLL(s, alg) {
+      const nodes = s.llNodes;
+      if(s.llActive < nodes.length){
+        if(s.llActive>0) nodes[s.llActive-1].active=false;
+        nodes[s.llActive].visited=true; nodes[s.llActive].active=true;
+        s.hi=[s.llActive]; s.llActive++;
+      } else s.done=true;
+    }
+
+    // DYNAMIC PROGRAMMING
+    function stepDP(s, alg) {
+      if(alg==='fibonacci'||alg==='climbing_stairs') {
+        if(s.dpStep<s.dpN){ s.hi=[s.dpStep]; if(s.dpStep>1)s.dpTable[s.dpStep]=s.dpTable[s.dpStep-1]+s.dpTable[s.dpStep-2]; s.special=[Math.max(0,s.dpStep-1),Math.max(0,s.dpStep-2)]; s.dpStep++; } else s.done=true;
+      } else if(alg==='coin_change'||alg==='rod_cut'||alg==='max_subarray'||alg==='max_product_subarray') {
+        if(s.dpStep<s.dpN){ s.hi=[s.dpStep]; s.dpTable[s.dpStep]=Math.max(s.dpTable[s.dpStep]||0,(s.dpTable[s.dpStep-1]||0)+Math.floor(Math.random()*20)-5); s.dpStep++; } else s.done=true;
+      } else {
+        if(s.dpStep<s.dpN){ s.hi=[s.dpStep]; s.dpTable[s.dpStep]+=s.dpStep; s.dpStep++; } else s.done=true;
+      }
+    }
+
+    // ARRAY
+    function stepArray(s, alg) {
+      const a = s.arr, n = a.length;
+      if(alg==='two_sum'||alg==='three_sum'||alg==='n_sum') {
+        if(s.arrJ<n){ s.hi=[s.arrI,s.arrJ]; s.arrJ++; if(s.arrJ>=n){s.arrI++;s.arrJ=s.arrI+1;} if(s.arrI>=n-1)s.done=true; } else s.done=true;
+      } else if(alg==='move_zeros'||alg==='remove_duplicates'||alg==='rotate') {
+        if(s.arrI<n){ s.hi=[s.arrI]; const val=a[s.arrI]; if(val===0&&s.arrJ<s.arrI){[a[s.arrJ],a[s.arrI]]=[a[s.arrI],a[s.arrJ]];s.arrJ++;} s.arrI++; } else s.done=true;
+      } else if(alg==='merge_intervals') {
+        if(s.arrI<n-1){ s.hi=[s.arrI,s.arrI+1]; if(a[s.arrI]>a[s.arrI+1])[a[s.arrI],a[s.arrI+1]]=[a[s.arrI+1],a[s.arrI]]; s.arrI++; } else s.done=true;
+      } else {
+        if(s.arrI<n){ s.hi=[s.arrI,(s.arrI+1)%n]; s.arrI++; } else s.done=true;
+      }
+    }
+
+    // STACK
+    function stepStack(s, alg) {
+      if(s.stackStep < 12){
+        const action = s.stackStep%3;
+        if(action<2) s.stackArr.push(Math.floor(Math.random()*90)+10);
+        else if(s.stackArr.length>0) s.stackArr.pop();
+        s.hi=[s.stackArr.length-1]; s.stackStep++;
+      } else s.done=true;
+    }
+
+    // STRING
+    function stepString(s, alg) {
+      const str = s.strS, pat = s.strP;
+      if(s.strI < str.length){
+        s.hi=[s.strI];
+        if(alg==='knuth_morris_pratt'||alg==='rabin_karp'||alg==='z_algorithm'||alg==='manacher') {
+          // sliding window match
+          if(s.strI+pat.length <= str.length){
+            const sub = str.slice(s.strI, s.strI+pat.length);
+            if(sub===pat) s.strMatches.push(s.strI);
+          }
+        }
+        s.special = s.strMatches.slice();
+        s.strI++;
+      } else s.done=true;
+    }
+
+    // MATRIX
+    function stepMatrix(s, alg) {
+      const m = s.matData, rows = m.length, cols = m[0].length;
+      if(alg==='spiral_traversal') {
+        if(!s.matSpiral){
+          s.matSpiral=[];
+          let t=0,b=rows-1,l=0,r=cols-1;
+          while(t<=b&&l<=r){
+            for(let j=l;j<=r;j++) s.matSpiral.push([t,j]);
+            t++;
+            for(let i=t;i<=b;i++) s.matSpiral.push([i,r]);
+            r--;
+            if(t<=b){for(let j=r;j>=l;j--) s.matSpiral.push([b,j]);b--;}
+            if(l<=r){for(let i=b;i>=t;i--) s.matSpiral.push([i,l]);l++;}
+          }
+          s.matSpiralIdx=0;
+        }
+        if(s.matSpiralIdx<s.matSpiral.length){ const [ri,ci]=s.matSpiral[s.matSpiralIdx]; s.matVisited.push(`${ri},${ci}`); s.matI=ri;s.matJ=ci; s.matSpiralIdx++; } else s.done=true;
+      } else {
+        // row-by-row
+        if(s.matI<rows){ s.matVisited.push(`${s.matI},${s.matJ}`); s.matJ++; if(s.matJ>=cols){s.matJ=0;s.matI++;} } else s.done=true;
+      }
+    }
+
+    // BIT
+    function stepBit(s, alg) {
+      if(s.bitStep < 8){ s.hi=[s.bitStep]; s.bitStep++; } else s.done=true;
+    }
+
+    // BACKTRACKING
+    function stepBacktrack(s, alg) {
+      if(s.btStep < 16){
+        const idx = s.btStep % s.btArr.length;
+        s.hi=[idx];
+        if(s.btCurrent.length<3) s.btCurrent.push(s.btArr[idx]);
+        else { s.btResult.push([...s.btCurrent]); s.btCurrent=[]; }
+        s.btStep++;
+      } else s.done=true;
+    }
+
+    // MATH
+    function stepMath(s, alg) {
+      if(alg==='primes_sieve_of_eratosthenes'||alg==='prime_check'||alg==='goldbach') {
+        const n = s.mathN;
+        if(s.mathCurrent <= n){
+          let isPrime = true;
+          for(let k=2;k*k<=s.mathCurrent;k++) if(s.mathCurrent%k===0){isPrime=false;break;}
+          if(isPrime) s.mathPrimes.push(s.mathCurrent);
+          s.hi=[s.mathCurrent-2]; s.mathCurrent++;
+        } else s.done=true;
+      } else {
+        if(s.mathStep < s.mathN){ s.hi=[s.mathStep]; s.mathStep++; } else s.done=true;
+      }
+    }
+
+    // HEAP
+    function stepHeap(s, alg) {
+      const a = s.heapArr, n = s.heapSize;
+      if(s.heapI >= 0){ s.hi=[s.heapI,2*s.heapI+1,2*s.heapI+2].filter(x=>x<n); heapifyDown(a,n,s.heapI); s.heapI--; }
+      else if(s.hk===undefined){s.hk=n-1;}
+      else if(s.hk>0){ [a[0],a[s.hk]]=[a[s.hk],a[0]]; s.hi=[0,s.hk]; heapifyDown(a,s.hk,0); s.hk--; }
+      else s.done=true;
+    }
+
+    // COMPRESSION
+    function stepCompression(s, alg) {
+      const str = s.compStr;
+      if(s.compI < str.length){
+        let cnt=1;
+        while(s.compI+cnt<str.length&&str[s.compI+cnt]===str[s.compI])cnt++;
+        s.compResult.push({char:str[s.compI],count:cnt});
+        s.hi=[s.compI];
+        s.compI+=cnt;
+      } else s.done=true;
+    }
+
+    // MAP
+    function stepMap(s, alg) {
+      if(s.hashI < s.hashKeys.length){ const k=s.hashKeys[s.hashI]; s.hashMap[k]=(s.hashMap[k]||0)+1; s.hi=[s.hashI]; s.hashI++; } else s.done=true;
+    }
+
+    // GREEDY
+    function stepGreedy(s, alg) {
+      if(s.arrI < s.arr.length){ s.hi=[s.arrI]; s.arrI++; } else s.done=true;
+    }
+
+    // QUEUE
+    function stepQueue(s, alg) {
+      if(s.stackStep < 16){
+        if(s.stackStep%3===0&&s.stackArr.length>0) s.stackArr.shift();
+        else s.stackArr.push(Math.floor(Math.random()*90)+10);
+        s.hi=[s.stackArr.length-1]; s.stackStep++;
+      } else s.done=true;
+    }
+
+    // ─── DRAW ───
+    function draw() {
+      if (!ctx || !cvs.value || !visState.cat) return;
+      const dpr = window.devicePixelRatio || 1;
+      const W = cvs.value.width / dpr;
+      const H = cvs.value.height / dpr;
+      ctx.save();
+      ctx.clearRect(0, 0, W*dpr, H*dpr);
+
+      const bg = light.value ? '#f8fafc' : '#0d1220';
+      ctx.fillStyle = bg;
+      ctx.fillRect(0,0,W*dpr,H*dpr);
+      ctx.scale(1,1); // already scaled at init
+
+      const cat = visState.cat;
+      if(cat==='Sorting') drawSort(W, H);
+      else if(cat==='Searching') drawSearch(W, H);
+      else if(cat==='Graph') drawGraph(W, H);
+      else if(cat==='Tree') drawTree(W, H);
+      else if(cat==='Linked List') drawLL(W, H);
+      else if(cat==='Dynamic Programming') drawDP(W, H);
+      else if(cat==='Array') drawArray(W, H);
+      else if(cat==='Stack') drawStack(W, H);
+      else if(cat==='String') drawString(W, H);
+      else if(cat==='Matrix') drawMatrix(W, H);
+      else if(cat==='Bit Manipulation') drawBit(W, H);
+      else if(cat==='Backtracking') drawBacktrack(W, H);
+      else if(cat==='Math') drawMath(W, H);
+      else if(cat==='Heap') drawHeapVis(W, H);
+      else if(cat==='Compression') drawCompression(W, H);
+      else if(cat==='Map') drawMap(W, H);
+      else if(cat==='Greedy'||cat==='Queue') drawSort(W, H);
+      else drawSort(W, H);
+
+      ctx.restore();
+    }
+
+    const C = () => light.value ? {
+      bg:'#f8fafc', bar:'#cbd5e1', hi:'#0284c7', done:'#16a34a',
+      node:'#e2e8f0', nodeB:'#94a3b8', nodeHi:'#0284c7', nodeVisit:'#16a34a',
+      edge:'#cbd5e1', edgeHi:'#0284c7', txt:'#0f172a', txt2:'#64748b',
+      dp:'#bfdbfe', dpHi:'#0284c7', dpDone:'#bbf7d0',
+      ll:'#e2e8f0', llHi:'#0284c7', llVisit:'#16a34a',
+      mat:'#e2e8f0', matHi:'#0284c7', matVisit:'rgba(2,132,199,.25)',
+      bit:'#e2e8f0', bitHi:'#0284c7',
+      str:'#e2e8f0', strHi:'#0284c7', strMatch:'#16a34a',
+    } : {
+      bg:'#0d1220', bar:'#1e3a52', hi:'#38bdf8', done:'#4ade80',
+      node:'#1c2d42', nodeB:'#2d4a6b', nodeHi:'#38bdf8', nodeVisit:'#4ade80',
+      edge:'#1e3a52', edgeHi:'#38bdf8', txt:'#e2e8f0', txt2:'#64748b',
+      dp:'#1a2e42', dpHi:'#38bdf8', dpDone:'#166534',
+      ll:'#1c2d42', llHi:'#38bdf8', llVisit:'#4ade80',
+      mat:'#1c2d42', matHi:'#38bdf8', matVisit:'rgba(56,189,248,.3)',
+      bit:'#1c2d42', bitHi:'#38bdf8',
+      str:'#1c2d42', strHi:'#38bdf8', strMatch:'#4ade80',
+    };
+
+    function drawSort(W, H) {
+      const s = visState, c = C();
+      const a = s.arr, n = a.length;
+      const gap=2, maxV=Math.max(...a,1);
+      const bw = Math.max(4, Math.floor((W-48-gap*(n-1))/n));
+      const maxH = H-60;
+      a.forEach((v,i)=>{
+        const x=24+i*(bw+gap), bh=Math.floor((v/maxV)*maxH), y=H-36-bh;
+        ctx.fillStyle = s.done ? c.done : (s.hi.includes(i)?c.hi:c.bar);
+        ctx.beginPath(); ctx.roundRect(x,y,bw,bh,[Math.min(2,bw/2),Math.min(2,bw/2),0,0]); ctx.fill();
+        if(n<=20&&bw>=12){ ctx.fillStyle=c.txt2; ctx.font=`9px ${IBM}`; ctx.textAlign='center'; ctx.fillText(v,x+bw/2,H-22); }
+      });
+      label(W,H,c,`${fmt(s.alg)} · n=${n}`);
+    }
+
+    const IBM = "'IBM Plex Mono',monospace";
+
+    function drawSearch(W, H) {
+      const s = visState, c = C();
+      const a = s.searchArr, n = a.length;
+      const gap=2, maxV=Math.max(...a,1);
+      const bw = Math.max(4, Math.floor((W-48-gap*(n-1))/n));
+      const maxH = H-70;
+      a.forEach((v,i)=>{
+        const x=24+i*(bw+gap), bh=Math.floor((v/maxV)*maxH), y=H-50-bh;
+        let col = c.bar;
+        if(i===s.found) col=c.done;
+        else if(s.hi.includes(i)) col=c.hi;
+        else if(s.special && s.special.includes(i)) col=light.value?'#bfdbfe':'#1e3a52';
+        ctx.fillStyle=col;
+        ctx.beginPath(); ctx.roundRect(x,y,bw,bh,[Math.min(2,bw/2),Math.min(2,bw/2),0,0]); ctx.fill();
+        if(n<=20&&bw>=12){ ctx.fillStyle=c.txt2; ctx.font=`9px ${IBM}`; ctx.textAlign='center'; ctx.fillText(v,x+bw/2,H-35); }
+      });
+      // target marker
+      ctx.fillStyle=c.hi; ctx.font=`11px ${IBM}`; ctx.textAlign='left';
+      ctx.fillText(`target: ${s.target}`, 24, 20);
+      if(s.found>=0){ ctx.fillStyle=c.done; ctx.fillText(`found at idx ${s.found}`, 24, 36); }
+      label(W,H,c,`${fmt(s.alg)}`);
+    }
+
+    function drawGraph(W, H) {
+      const s = visState, c = C();
+      const scaleX = W/700, scaleY = H/320;
+      // draw edges
+      ctx.lineWidth=1.5;
+      for(const e of s.edges){
+        const n1=s.nodes[e.from], n2=s.nodes[e.to];
+        const x1=n1.x*scaleX, y1=n1.y*scaleY+10, x2=n2.x*scaleX, y2=n2.y*scaleY+10;
+        ctx.strokeStyle=e.hi?c.edgeHi:c.edge;
+        ctx.lineWidth=e.hi?2:1;
+        ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+        // weight
+        ctx.fillStyle=c.txt2; ctx.font=`9px ${IBM}`; ctx.textAlign='center';
+        ctx.fillText(e.w, (x1+x2)/2, (y1+y2)/2-3);
+      }
+      // draw nodes
+      for(const [i,n] of s.nodes.entries()){
+        const x=n.x*scaleX, y=n.y*scaleY+10, r=16;
+        ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+        ctx.fillStyle = n.visited ? c.nodeVisit : (n.active||s.hi.includes(i) ? c.nodeHi : c.node);
+        ctx.fill();
+        ctx.strokeStyle = n.visited ? c.nodeVisit : c.nodeB;
+        ctx.lineWidth = n.active||s.hi.includes(i) ? 2 : 1;
+        ctx.stroke();
+        ctx.fillStyle=n.visited?'#fff':(light.value?'#0f172a':'#e2e8f0');
+        ctx.font=`bold 11px ${IBM}`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(n.label, x, y);
+      }
+      ctx.textBaseline='alphabetic';
+      label(W,H,c,`${fmt(s.alg)} · BFS traversal`);
+    }
+
+    function drawTree(W, H) {
+      const s = visState, c = C();
+      const nodes = s.treeNodes, n = nodes.length;
+      const levels = Math.ceil(Math.log2(n+1));
+      const nodeR = Math.min(20, (W/2) / Math.pow(2, levels));
+      // compute positions
+      const pos = nodes.map((_,i)=>{
+        const level = Math.floor(Math.log2(i+1));
+        const posInLevel = i - (Math.pow(2,level)-1);
+        const nodesInLevel = Math.pow(2,level);
+        const x = W * (posInLevel+0.5) / nodesInLevel;
+        const y = 30 + level * (H-60) / (levels);
+        return {x,y};
+      });
+      // edges
+      for(let i=0;i<n;i++){
+        const nd=nodes[i];
+        if(nd.left>=0&&nd.left<n){ const {x:x1,y:y1}=pos[i],{x:x2,y:y2}=pos[nd.left]; ctx.strokeStyle=c.edge; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); }
+        if(nd.right>=0&&nd.right<n){ const {x:x1,y:y1}=pos[i],{x:x2,y:y2}=pos[nd.right]; ctx.strokeStyle=c.edge; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); }
+      }
+      // nodes
+      for(let i=0;i<n;i++){
+        const {x,y}=pos[i], nd=nodes[i];
+        ctx.beginPath(); ctx.arc(x,y,nodeR,0,Math.PI*2);
+        ctx.fillStyle = nd.visited ? c.nodeVisit : (s.hi.includes(i) ? c.nodeHi : c.node);
+        ctx.fill();
+        ctx.strokeStyle = c.nodeB; ctx.lineWidth=1; ctx.stroke();
+        ctx.fillStyle=nd.visited?'#fff':(light.value?'#0f172a':'#e2e8f0');
+        ctx.font=`bold ${Math.max(8,nodeR-4)}px ${IBM}`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(nd.v, x, y);
+      }
+      ctx.textBaseline='alphabetic';
+      label(W,H,c,`${fmt(s.alg)} · visited: ${s.treeVisited.map(i=>nodes[i].v).join('→')}`);
+    }
+
+    function drawLL(W, H) {
+      const s = visState, c = C();
+      const nodes = s.llNodes, n = nodes.length;
+      const boxW=60, boxH=40, gap=20, totalW=n*(boxW+gap)-gap;
+      const startX=(W-totalW)/2, y=H/2-20;
+      nodes.forEach((nd,i)=>{
+        const x=startX+i*(boxW+gap);
+        ctx.fillStyle = nd.visited ? (s.hi.includes(i)?c.llHi:c.llVisit) : c.ll;
+        ctx.strokeStyle = s.hi.includes(i) ? c.llHi : c.nodeB;
+        ctx.lineWidth = s.hi.includes(i) ? 2 : 1;
+        ctx.beginPath(); ctx.roundRect(x,y,boxW,boxH,[6]); ctx.fill(); ctx.stroke();
+        ctx.fillStyle=light.value?'#0f172a':'#e2e8f0';
+        ctx.font=`bold 13px ${IBM}`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(nd.val, x+boxW/2, y+boxH/2);
+        // arrow
+        if(i<n-1){
+          const ax=x+boxW+2, ay=y+boxH/2;
+          ctx.strokeStyle=c.edge; ctx.lineWidth=1.5;
+          ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ax+gap-4,ay); ctx.stroke();
+          // arrowhead
+          ctx.fillStyle=c.edge;
+          ctx.beginPath(); ctx.moveTo(ax+gap-2,ay); ctx.lineTo(ax+gap-8,ay-4); ctx.lineTo(ax+gap-8,ay+4); ctx.fill();
+        }
+      });
+      ctx.textBaseline='alphabetic';
+      label(W,H,c,`${fmt(s.alg)} · node ${s.llActive}/${n}`);
+    }
+
+    function drawDP(W, H) {
+      const s = visState, c = C();
+      const n = s.dpTable.length;
+      const cellW = Math.max(30, Math.min(60, (W-80)/n));
+      const cellH = 50, startX=(W-n*cellW)/2, y=H/2-cellH/2;
+      // table
+      s.dpTable.forEach((v,i)=>{
+        const x=startX+i*cellW;
+        ctx.fillStyle = i===s.dpStep-1 ? c.dpHi : (i<s.dpStep-1 ? c.dpDone : c.dp);
+        ctx.strokeStyle=c.nodeB; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.rect(x,y,cellW,cellH); ctx.fill(); ctx.stroke();
+        ctx.fillStyle=light.value?'#0f172a':'#e2e8f0';
+        ctx.font=`10px ${IBM}`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(v, x+cellW/2, y+cellH/2);
+        ctx.fillStyle=c.txt2; ctx.font=`9px ${IBM}`;
+        ctx.fillText(`[${i}]`, x+cellW/2, y+cellH+14);
+      });
+      ctx.textBaseline='alphabetic';
+      label(W,H,c,`${fmt(s.alg)} · dp table`);
+    }
+
+    function drawArray(W, H) {
+      const s = visState, c = C();
+      const a = s.arr, n = a.length;
+      const gap=2, maxV=Math.max(...a,1);
+      const bw=Math.max(4, Math.floor((W-48-gap*(n-1))/n)), maxH=H-70;
+      a.forEach((v,i)=>{
+        const x=24+i*(bw+gap), bh=Math.floor((v/maxV)*maxH), y=H-50-bh;
+        ctx.fillStyle=s.hi.includes(i)?c.hi:(s.done?c.done:c.bar);
+        ctx.beginPath(); ctx.roundRect(x,y,bw,bh,[Math.min(2,bw/2),Math.min(2,bw/2),0,0]); ctx.fill();
+        if(n<=20&&bw>=12){ ctx.fillStyle=c.txt2; ctx.font=`9px ${IBM}`; ctx.textAlign='center'; ctx.fillText(v,x+bw/2,H-35); }
+      });
+      label(W,H,c,`${fmt(s.alg)} · i=${s.arrI}`);
+    }
+
+    function drawStack(W, H) {
+      const s = visState, c = C();
+      const stk = s.stackArr, n = stk.length;
+      const boxW=80, boxH=32, gap=3, startY=H-40;
+      const x=(W-boxW)/2;
+      const maxShow = Math.floor((H-60)/(boxH+gap));
+      const show = stk.slice(Math.max(0,n-maxShow));
+      show.forEach((v,i)=>{
+        const realI=n-show.length+i;
+        const y=startY-(i+1)*(boxH+gap);
+        ctx.fillStyle = realI===n-1 ? c.hi : c.ll;
+        ctx.strokeStyle=c.nodeB; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.roundRect(x,y,boxW,boxH,[4]); ctx.fill(); ctx.stroke();
+        ctx.fillStyle=light.value?'#0f172a':'#e2e8f0';
+        ctx.font=`12px ${IBM}`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(v, x+boxW/2, y+boxH/2);
+      });
+      // base line
+      ctx.strokeStyle=c.nodeB; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(x-10,startY); ctx.lineTo(x+boxW+10,startY); ctx.stroke();
+      ctx.textBaseline='alphabetic';
+      label(W,H,c,`${fmt(s.alg)} · size=${n}`);
+    }
+
+    function drawString(W, H) {
+      const s = visState, c = C();
+      const str = s.strS, pat = s.strP;
+      const charW=Math.min(32,(W-48)/str.length), charH=40, y=H/2-charH/2-20;
+      const startX=(W-str.length*charW)/2;
+      // main string
+      str.split('').forEach((ch,i)=>{
+        const x=startX+i*charW;
+        const isMatch=s.strMatches.includes(i)||(i>=s.strI-pat.length&&i<s.strI&&s.strMatches.includes(s.strI-pat.length));
+        ctx.fillStyle = i===s.strI-1 ? c.strHi : (isMatch ? c.strMatch : c.str);
+        ctx.strokeStyle=c.nodeB; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.roundRect(x,y,charW-2,charH,[4]); ctx.fill(); ctx.stroke();
+        ctx.fillStyle=light.value?'#0f172a':'#e2e8f0';
+        ctx.font=`bold 13px ${IBM}`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(ch, x+charW/2-1, y+charH/2);
+      });
+      // pattern
+      const py=y+charH+20, pStartX=(W-pat.length*charW)/2;
+      ctx.fillStyle=c.txt2; ctx.font=`9px ${IBM}`; ctx.textAlign='center';
+      ctx.fillText('pattern:', pStartX-30, py+20);
+      pat.split('').forEach((ch,i)=>{
+        const x=pStartX+i*charW;
+        ctx.fillStyle=c.hi; ctx.strokeStyle=c.nodeB; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.roundRect(x,py,charW-2,charH,[4]); ctx.fill(); ctx.stroke();
+        ctx.fillStyle='#fff';
+        ctx.font=`bold 13px ${IBM}`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(ch, x+charW/2-1, py+charH/2);
+      });
+      ctx.textBaseline='alphabetic';
+      label(W,H,c,`${fmt(s.alg)} · matches: ${s.strMatches.length}`);
+    }
+
+    function drawMatrix(W, H) {
+      const s = visState, c = C();
+      const m = s.matData, rows=m.length, cols=m[0].length;
+      const cellW=Math.floor((W-60)/cols), cellH=Math.floor((H-80)/rows);
+      const startX=(W-cols*cellW)/2, startY=(H-rows*cellH)/2;
+      m.forEach((row,ri)=>row.forEach((v,ci)=>{
+        const x=startX+ci*cellW, y=startY+ri*cellH;
+        const key=`${ri},${ci}`;
+        const isVisited=s.matVisited.includes(key);
+        const isCurrent=ri===s.matI&&ci===s.matJ;
+        ctx.fillStyle=isCurrent?c.matHi:(isVisited?c.matVisit:c.mat);
+        ctx.strokeStyle=c.nodeB; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.rect(x,y,cellW,cellH); ctx.fill(); ctx.stroke();
+        ctx.fillStyle=isCurrent?'#fff':(light.value?'#0f172a':'#e2e8f0');
+        ctx.font=`11px ${IBM}`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(v, x+cellW/2, y+cellH/2);
+      }));
+      ctx.textBaseline='alphabetic';
+      label(W,H,c,`${fmt(s.alg)} · visited ${s.matVisited.length}/${rows*cols}`);
+    }
+
+    function drawBit(W, H) {
+      const s = visState, c = C();
+      const num = s.bitNum;
+      const bits = Array.from({length:8}, (_,i)=>(num>>(7-i))&1);
+      const boxW=50, boxH=50, gap=8, totalW=8*(boxW+gap)-gap;
+      const startX=(W-totalW)/2, y=H/2-boxH/2;
+      bits.forEach((b,i)=>{
+        const x=startX+i*(boxW+gap);
+        const isHi=s.hi.includes(7-i)||s.hi.includes(i);
+        ctx.fillStyle=isHi?c.bitHi:(b?c.nodeHi:c.bit);
+        ctx.strokeStyle=c.nodeB; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.roundRect(x,y,boxW,boxH,[6]); ctx.fill(); ctx.stroke();
+        ctx.fillStyle=b?'#fff':(light.value?'#64748b':'#94a3b8');
+        ctx.font=`bold 20px ${IBM}`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(b, x+boxW/2, y+boxH/2);
+        ctx.fillStyle=c.txt2; ctx.font=`9px ${IBM}`;
+        ctx.fillText(`2^${7-i}`, x+boxW/2, y+boxH+14);
+      });
+      ctx.textBaseline='alphabetic';
+      ctx.fillStyle=c.hi; ctx.font=`12px ${IBM}`; ctx.textAlign='center';
+      ctx.fillText(`decimal: ${num}`, W/2, y-12);
+      label(W,H,c,`${fmt(s.alg)}`);
+    }
+
+    function drawBacktrack(W, H) {
+      const s = visState, c = C();
+      const arr = s.btArr, n = arr.length;
+      const boxW=55, boxH=40, gap=12;
+      const totalW=n*(boxW+gap)-gap, startX=(W-totalW)/2, y=60;
+      arr.forEach((v,i)=>{
+        const x=startX+i*(boxW+gap);
+        ctx.fillStyle=s.hi.includes(i)?c.hi:c.bar;
+        ctx.strokeStyle=c.nodeB; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.roundRect(x,y,boxW,boxH,[6]); ctx.fill(); ctx.stroke();
+        ctx.fillStyle=light.value?'#0f172a':'#e2e8f0';
+        ctx.font=`bold 14px ${IBM}`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(v, x+boxW/2, y+boxH/2);
+      });
+      // current path
+      const curr=s.btCurrent, results=s.btResult;
+      ctx.fillStyle=c.txt2; ctx.font=`11px ${IBM}`; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+      ctx.fillText('Current: ['+curr.join(', ')+']', 24, y+boxH+30);
+      results.slice(-5).forEach((r,i)=>{
+        ctx.fillStyle=c.done; ctx.fillText('✓ ['+r.join(', ')+']', 24, y+boxH+50+i*18);
+      });
+      label(W,H,c,`${fmt(s.alg)} · solutions: ${results.length}`);
+    }
+
+    function drawMath(W, H) {
+      const s = visState, c = C();
+      if(s.alg==='primes_sieve_of_eratosthenes'||s.alg==='prime_check'||s.alg==='goldbach') {
+        const n=s.mathN, cellW=Math.min(40,Math.floor((W-60)/n)), cellH=40;
+        const totalW=n*cellW, startX=(W-totalW)/2, y=H/2-cellH/2;
+        Array.from({length:n-2},(_,i)=>i+2).forEach((v,i)=>{
+          const x=startX+i*cellW;
+          const isPrime=s.mathPrimes.includes(v);
+          const isCurr=v===s.mathCurrent;
+          ctx.fillStyle=isCurr?c.hi:(isPrime?c.done:c.bar);
+          ctx.strokeStyle=c.nodeB; ctx.lineWidth=1;
+          ctx.beginPath(); ctx.rect(x,y,cellW,cellH); ctx.fill(); ctx.stroke();
+          ctx.fillStyle=light.value?'#0f172a':'#e2e8f0';
+          ctx.font=`${Math.max(8,cellW-8)}px ${IBM}`; ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.fillText(v,x+cellW/2,y+cellH/2);
+        });
+        ctx.textBaseline='alphabetic';
+        ctx.fillStyle=c.done; ctx.font=`11px ${IBM}`; ctx.textAlign='left';
+        ctx.fillText(`primes: ${s.mathPrimes.join(', ')}`, 24, 22);
+      } else {
+        // generic bar chart for math
+        const vals=Array.from({length:s.mathN},(_,i)=>Math.round(Math.sin(i*0.4)*100+120));
+        const maxV=Math.max(...vals,1), gap=2;
+        const bw=Math.max(4, Math.floor((W-48-gap*(vals.length-1))/vals.length)), maxH=H-60;
+        vals.forEach((v,i)=>{
+          const x=24+i*(bw+gap), bh=Math.floor((v/maxV)*maxH), y=H-36-bh;
+          ctx.fillStyle=i<s.mathStep?c.done:(i===s.mathStep?c.hi:c.bar);
+          ctx.beginPath(); ctx.roundRect(x,y,bw,bh,[Math.min(2,bw/2),Math.min(2,bw/2),0,0]); ctx.fill();
+        });
+      }
+      label(W,H,c,`${fmt(s.alg)}`);
+    }
+
+    function drawHeapVis(W, H) {
+      const s = visState, c = C();
+      const a = s.heapArr, n = a.length;
+      const gap=2, maxV=Math.max(...a,1);
+      const bw=Math.max(4, Math.floor((W-48-gap*(n-1))/n)), maxH=H-80;
+      a.forEach((v,i)=>{
+        const x=24+i*(bw+gap), bh=Math.floor((v/maxV)*maxH), y=H-50-bh;
+        ctx.fillStyle=s.hi.includes(i)?c.hi:c.bar;
+        ctx.beginPath(); ctx.roundRect(x,y,bw,bh,[Math.min(2,bw/2),Math.min(2,bw/2),0,0]); ctx.fill();
+      });
+      // parent lines
+      for(let i=1;i<Math.min(n,15);i++){
+        const par=Math.floor((i-1)/2);
+        const pw=bw, ph=bw;
+        const px=24+par*(bw+gap)+bw/2, py=H-50-Math.floor((a[par]/maxV)*maxH);
+        const cx_=24+i*(bw+gap)+bw/2, cy_=H-50-Math.floor((a[i]/maxV)*maxH);
+        ctx.strokeStyle=c.edge; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(cx_,cy_); ctx.stroke();
+      }
+      label(W,H,c,`${fmt(s.alg)} · heap property`);
+    }
+
+    function drawCompression(W, H) {
+      const s = visState, c = C();
+      const str=s.compStr, result=s.compResult;
+      const charW=Math.min(30,(W-60)/str.length), charH=36;
+      const startX=(W-str.length*charW)/2, y=80;
+      str.split('').forEach((ch,i)=>{
+        const x=startX+i*charW;
+        const inResult=result.some((r,ri)=>{let offset=0; for(let k=0;k<ri;k++)offset+=result[k].count; return i>=offset&&i<offset+r.count;});
+        ctx.fillStyle=i<s.compI?(inResult?c.done:c.nodeHi):(i===s.compI?c.hi:c.bar);
+        ctx.strokeStyle=c.nodeB; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.roundRect(x,y,charW-1,charH,[3]); ctx.fill(); ctx.stroke();
+        ctx.fillStyle=light.value?'#0f172a':'#e2e8f0';
+        ctx.font=`bold 12px ${IBM}`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(ch,x+charW/2,y+charH/2);
+      });
+      // result
+      const encoded=result.map(r=>`${r.count}${r.char}`).join('');
+      ctx.fillStyle=c.done; ctx.font=`13px ${IBM}`; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('→ '+encoded, W/2, H*0.7);
+      ctx.textBaseline='alphabetic';
+      label(W,H,c,`${fmt(s.alg)}`);
+    }
+
+    function drawMap(W, H) {
+      const s = visState, c = C();
+      const keys=s.hashKeys, map=s.hashMap;
+      const boxW=80, boxH=40, gap=12;
+      const n=keys.length, totalW=n*(boxW+gap)-gap;
+      const startX=(W-totalW)/2, y=H/2-boxH;
+      keys.forEach((k,i)=>{
+        const x=startX+i*(boxW+gap);
+        ctx.fillStyle=i<s.hashI?(c.nodeVisit):(i===s.hashI?c.hi:c.ll);
+        ctx.strokeStyle=c.nodeB; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.roundRect(x,y,boxW,boxH,[6]); ctx.fill(); ctx.stroke();
+        ctx.fillStyle=light.value?'#0f172a':'#e2e8f0';
+        ctx.font=`11px ${IBM}`; ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(`"${k}"`, x+boxW/2, y+boxH/2);
+        if(map[k]!==undefined){
+          ctx.fillStyle=c.done;
+          ctx.fillText(`→ ${map[k]}`, x+boxW/2, y+boxH+18);
+        }
+      });
+      ctx.textBaseline='alphabetic';
+      label(W,H,c,`${fmt(s.alg)} · hash map`);
+    }
+
+    function label(W,H,c,text) {
+      ctx.fillStyle=c.txt2; ctx.font=`11px ${IBM}`; ctx.textAlign='center';
+      ctx.fillText(text, W/2, H-8);
+    }
+
+    // ─── ANIMATION LOOP ───
+    function loopAnim() {
+      if (!playing.value) return;
+      const now = performance.now();
+      const delay = Math.max(2, 600 - speed.value * 0.58);
+      if (now - lastTime >= delay) {
+        lastTime = now;
+        doStep();
+      }
+      raf = requestAnimationFrame(loopAnim);
+    }
+
+    function togglePlay() {
+      if (visState.done) { restart(); return; }
+      playing.value = !playing.value;
+      if (playing.value) { lastTime = 0; loopAnim(); }
+      else cancelAnimationFrame(raf);
+    }
+
+    function stepOnce() {
+      if (playing.value) { playing.value = false; cancelAnimationFrame(raf); }
+      doStep();
+    }
+
+    function restart() {
+      playing.value = false;
+      cancelAnimationFrame(raf);
+      stepN.value = 0;
+      buildState(selCat.value, sel.value);
+      draw();
+      setTimeout(() => { playing.value = true; loopAnim(); }, 100);
+    }
+
+    function toggleTheme() {
+      light.value = !light.value;
+      document.documentElement.classList.toggle('light', light.value);
+      nextTick(() => draw());
+    }
+
+    onMounted(() => {
+      ex['Sorting'] = true;
+      setTimeout(() => pick('Sorting','bubble_sort'), 100);
+      window.addEventListener('resize', () => { if (cvs.value) { initCanvas(); draw(); } });
+    });
+
+    watch(tab, () => { if (tab.value==='Visualize') nextTick(() => { initCanvas(); draw(); }); });
+
+    return {
+      light, drawerOpen, q, ex, selCat, sel, tab, code,
+      speed, playing, stepN, cvs, info, tabs, filtered,
+      canInstall, installPWA,
+      fmt, toggleCat, onSearch, pick,
+      togglePlay, stepOnce, restart, toggleTheme
+    };
+  }
+}).mount('#app');
+
+// ─── SERVICE WORKER ───
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
