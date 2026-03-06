@@ -2170,11 +2170,14 @@ createApp({
 
           ctx.fillStyle=C.txt2; ctx.font=monoFont(10); ctx.textAlign='center';
           ctx.fillText(fmt(alg) + (input.length ? `  max=\( {Math.max(...dp)}` : `  result= \){dp[n]}`), W/2, H-12);
+
         }
       }
 
       function getStats(){ return [{k:'steps',v:steps},{k:'n',v:n},{k:'result',v:dp[n]??'?'}]; }
-      function getLabel(){ return done ? `Done — result = \( {dp[n]??dp2?.[str1.length]?.[str2.length]??'?'}` : `Computing dp[ \){current}]…`; }
+      function getLabel(){ return done 
+  ? `Done — result = ${dp[n] ?? dp2?.[str1.length]?.[str2.length] ?? '?'}`
+  : `Computing dp[${current}]…`; }
       function snapshot(){ return {dp:[...dp],current,done,steps,is2D,dp2:JSON.parse(JSON.stringify(dp2||[])),input:[... (input||[])],str1,str2}; }
       function restore(s){ dp=s.dp; current=s.current; done=s.done; steps=s.steps; is2D=s.is2D; dp2=s.dp2; input=s.input; str1=s.str1; str2=s.str2; }
 
