@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -222,7 +223,7 @@ body{height:100%;overflow:hidden;font-family:'IBM Plex Sans',sans-serif;-webkit-
 }
 .cvs-stat-item{display:flex;align-items:center;gap:4px}
 .cvs-stat-val{color:var(--acc)}
-canvas{width:100%;display:block}
+canvas{width:100%;display:block;touch-action:none}
 
 /* ═══ PARAMS PANEL ═══ */
 .params-row{
@@ -574,8 +575,33 @@ canvas{width:100%;display:block}
   </main>
 </div>
 
-<script>
-const {createApp,reactive,ref,computed,watch,onMounted,nextTick} = Vue;
+<script type="importmap">
+{
+  "imports": {
+    "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+  }
+}
+</script>
+
+<script type="module">
+import { createApp, reactive, ref, computed, nextTick } from 'vue';
+import { ELI5 } from './eli5.js';
+
+// Add roundRect to Canvas prototype
+CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+  if (w < 2 * r) r = w / 2;
+  if (h < 2 * r) r = h / 2;
+  this.moveTo(x + r, y);
+  this.lineTo(x + w - r, y);
+  this.quadraticCurveTo(x + w, y, x + w, y + r);
+  this.lineTo(x + w, y + h - r);
+  this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  this.lineTo(x + r, y + h);
+  this.quadraticCurveTo(x, y + h, x, y + h - r);
+  this.lineTo(x, y + r);
+  this.quadraticCurveTo(x, y, x + r, y);
+  return this;
+};
 
 // ═══════════════════════════════════════════════
 // ALGORITHM DATABASE
@@ -601,132 +627,26 @@ const ALGS = {
   'Tree':['binary_tree_paths','bst_height','bst_is_bst','bst_kth_smallest','bst_lowest_common_ancestor','invert_tree','is_balanced','is_subtree','is_symmetric','lowest_common_ancestor','max_height','max_path_sum','path_sum','same_tree','traversal_inorder','traversal_level_order','traversal_postorder','traversal_preorder','traversal_zigzag']
 };
 
-// ═══════════════════════════════════════════════
-// ELI5 DATABASE  
-// ═══════════════════════════════════════════════
-const ELI5_DB = {
-  'Sorting:bubble_sort':{eli5:"Walk through the list again and again, swapping adjacent elements if they're in the wrong order. Large values 'bubble up' to the end like air bubbles rising in water. Repeat until a full pass makes zero swaps.",pros:['Simple to code from memory','No extra memory needed','Stable — equal elements keep their original order'],cons:['O(n²) — extremely slow on large data','Makes many redundant comparisons','Never used in production code'],uses:['Teaching sorting fundamentals','Tiny arrays (< 20 items)'],avoid:'Any real-world application with more than ~50 items',time:'O(n²)',space:'O(1)',desc:'Repeatedly compares adjacent elements, swapping when out of order. Terminates when a full pass yields no swaps.'},
-  'Sorting:insertion_sort':{eli5:"Like organizing playing cards in your hand: hold a sorted left portion, take one new card from the right, slide it left until it finds its spot among the sorted cards. Repeat until all cards are sorted.",pros:['Fast on nearly-sorted data','Stable sort','Extremely low overhead — great for small n','Adaptive: O(n) best case'],cons:['O(n²) average/worst on random data','Lots of element shifting'],uses:['Small arrays (< 30 items)','Nearly-sorted streams','Used inside Timsort for small runs'],avoid:'Large random datasets',time:'O(n²)',space:'O(1)',desc:'Builds the sorted array one element at a time, inserting each new element into its correct position within the sorted portion.'},
-  'Sorting:selection_sort':{eli5:"Divide the array into sorted and unsorted parts. Repeatedly scan the entire unsorted part, find the minimum, and move it to the end of the sorted part. Like choosing the shortest kid first in a line-up.",pros:['Minimal number of swaps: exactly O(n)','Easy to understand','Works well when writing to memory is costly'],cons:['Always O(n²) comparisons — never adapts to input','Not stable'],uses:['When memory writes are expensive (e.g. flash storage)','Tiny arrays'],avoid:'Any performance-sensitive scenario',time:'O(n²)',space:'O(1)',desc:'Divides the array into sorted/unsorted portions; repeatedly extracts the minimum from unsorted and appends to sorted.'},
-  'Sorting:quick_sort':{eli5:"Pick a pivot element. Partition: put everything smaller to its left, everything larger to its right. Pivot is now in its final position! Recursively do the same to both halves. Conquer by dividing!",pros:['Fastest in practice — O(n log n) average','In-place: O(log n) stack space','Cache-friendly memory access pattern'],cons:['Worst case O(n²) with bad pivot selection','Not stable','Stack overflow risk on deeply unbalanced partitions'],uses:["Most languages' built-in sort (or variant)","General-purpose sorting of large in-memory data"],avoid:'When worst-case guarantee is required',time:'O(n log n)',space:'O(log n)',desc:'Divide-and-conquer: select a pivot, partition array around it, recursively sort each partition.'},
-  'Sorting:merge_sort':{eli5:"Split the array exactly in half. Recursively sort each half. Then merge the two sorted halves together, like shuffling two sorted decks of cards — always picking the smaller front card. Guaranteed O(n log n) always.",pros:['Guaranteed O(n log n) — no bad cases','Stable sort','Excellent for external sorting and linked lists'],cons:['Requires O(n) auxiliary memory','Slower constants than quicksort for arrays'],uses:['External sorting (data too large for RAM)','Stable sort requirements','Merge sort is used in Java and Python'],avoid:'Memory-constrained environments',time:'O(n log n)',space:'O(n)',desc:'Divide array in half recursively, sort each half, merge sorted halves using the classic two-pointer merge.'},
-  'Sorting:heap_sort':{eli5:"First build a max-heap: a tree where every parent is bigger than its children. Now the root is always the largest element. Swap root to the end, shrink the heap, restore heap property. Repeat until heap is empty.",pros:['Guaranteed O(n log n) — consistent performance','In-place: O(1) extra space','Good worst-case guarantee'],cons:['Not stable','Poor cache behavior due to non-sequential access','Slower than quicksort in practice'],uses:['When O(1) extra space is required','Real-time systems with worst-case guarantees','Used in introspective sort (introsort)'],avoid:'When average-case speed is the priority',time:'O(n log n)',space:'O(1)',desc:'Convert array to max-heap in O(n), then repeatedly extract the max to sort in O(n log n).'},
-  'Sorting:shell_sort':{eli5:"Insertion sort, but smarter: start by sorting elements that are far apart (gap = n/2), then progressively shrink the gap. This pre-arranges the array so the final insertion sort (gap=1) is very fast.",pros:['Much faster than O(n²) in practice','In-place sort','Simple to implement'],cons:['Not stable','Time complexity depends on gap sequence (hard to analyze)','Not as fast as O(n log n) algorithms'],uses:['Embedded systems with limited memory','When simplicity and decent speed both matter'],avoid:'When proven O(n log n) is required',time:'O(n log² n)',space:'O(1)',desc:'Generalization of insertion sort. Sorts elements at decreasing gap intervals, making the final pass very efficient.'},
-  'Sorting:counting_sort':{eli5:"Don't compare at all! Count how many times each value appears. Use the counts to fill a sorted output array directly. If the value range k is small, this is incredibly fast.",pros:['Linear O(n+k) — fastest possible for integers in range','Stable sort'],cons:['Only works for integers in a known small range','Needs O(k) extra memory — unusable if k >> n'],uses:['Sorting small integers (ages, grades, characters)','Subroutine in radix sort'],avoid:'Floating-point numbers, strings, or huge value ranges',time:'O(n+k)',space:'O(k)',desc:"Count occurrences of each value, compute prefix sums to determine sorted positions, place elements."},
-  'Sorting:radix_sort':{eli5:"Sort numbers digit by digit, from the least significant digit to the most significant. Use a stable counting sort for each digit position. After d digit passes, the array is fully sorted!",pros:['O(d·n) — linear for fixed-width integers','Stable sort','Very fast for integers and fixed-length strings'],cons:['Only works for integers or fixed-length data','More complex implementation','d passes needed (d = number of digits)'],uses:['Phone numbers, postal codes, IP addresses','Fixed-width integer arrays in competitive programming'],avoid:'Variable-length data or floating-point numbers',time:'O(d·n)',space:'O(n+k)',desc:'Sorts by processing each digit position from LSD to MSD, using stable counting sort at each pass.'},
-  'Sorting:counting_sort':{eli5:"Don't compare at all! Count how many times each value appears. Use prefix sums to place each value directly into its sorted position in the output array.",pros:['O(n+k) linear time','Stable'],cons:['Integer-only, small range k','O(k) memory'],uses:['Small integer ranges','Radix sort subroutine'],avoid:'Large ranges or non-integer data',time:'O(n+k)',space:'O(k)',desc:'Count value frequencies, compute prefix sums, place elements at their correct sorted positions.'},
-  'Sorting:bucket_sort':{eli5:"Scatter n numbers into n equal-width buckets based on their value range. Sort each bucket individually (usually with insertion sort). Concatenate all buckets in order.",pros:['O(n) average for uniformly distributed data','Can be parallelized'],cons:['Worst case O(n²) if data clusters in one bucket','Sensitive to data distribution'],uses:['Uniformly distributed floats in [0,1)','Distributed computing scenarios'],avoid:'Skewed or clustered data distributions',time:'O(n+k)',space:'O(n)',desc:'Distribute elements into n buckets, sort each bucket, concatenate.'},
-  'Sorting:gnome_sort':{eli5:"Like a gnome sorting flower pots: move forward if current and previous pots are in order. If not, swap them and step back. When you reach the start, step forward again. Slow but simple.",pros:['Extremely simple code (< 10 lines)','Stable sort','In-place'],cons:['O(n²) — very slow in practice','Lots of unnecessary back-tracking'],uses:['Educational purposes only'],avoid:'Any real application',time:'O(n²)',space:'O(1)',desc:'Move forward if sorted, otherwise swap adjacent elements and step back. Repeat until end.'},
-  'Sorting:cocktail_shaker_sort':{eli5:"Bubble sort that goes both ways! One pass goes left-to-right (moving max to end), the next goes right-to-left (moving min to start). Both ends get sorted simultaneously — slightly faster than bubble.",pros:['Faster than bubble sort (handles small values at end better)','Stable','Reduces passes for some inputs'],cons:['Still O(n²) overall'],uses:['Educational — shows improvement over bubble sort'],avoid:'Large datasets',time:'O(n²)',space:'O(1)',desc:'Bidirectional bubble sort: one pass pushes max right, next pass pushes min left, alternating.'},
-  'Sorting:comb_sort':{eli5:"Bubble sort improved: instead of comparing only adjacent elements, start by comparing elements far apart (gap = n/1.3). Shrink the gap each pass. When gap = 1, it's bubble sort — but the array is almost sorted!",pros:["Significantly faster than bubble sort","Simple modification of bubble sort"],cons:['Not stable','Still O(n²) worst case theoretical'],uses:['When bubble sort is the baseline but more speed needed'],avoid:'Production environments',time:'O(n²)',space:'O(1)',desc:'Improves bubble sort by using a gap > 1 initially (n/1.3), shrinking by factor 1.3 each pass.'},
-  'Sorting:cycle_sort':{eli5:"Every element belongs to a 'cycle' — a circular chain of positions. Move each element directly to its correct position, completing one cycle at a time. Theoretically minimizes total writes.",pros:['Minimum possible writes: O(n)','In-place'],cons:['O(n²) comparisons','Complex implementation'],uses:['Flash memory / EEPROM where writes are expensive and limited'],avoid:'General-purpose sorting',time:'O(n²)',space:'O(1)',desc:'Places each element directly in its final position by completing cycles, minimizing total write operations.'},
-  'Sorting:pancake_sort':{eli5:"You can only flip a prefix of the array (like flipping a stack of pancakes upside down). Strategy: find the max in unsorted portion, flip it to position 0, then flip it to its final position. Repeat.",pros:['Only uses prefix reversal operations','Interesting theoretical model'],cons:['O(n²) flips','Not practical'],uses:['Theoretical CS','Biological sequence sorting models'],avoid:'Any real sorting task',time:'O(n²)',space:'O(1)',desc:'Sorts using only prefix reversals: repeatedly bring max to front, then flip to final position.'},
-  'Sorting:wiggle_sort':{eli5:"Rearrange the array so it alternates: small, big, small, big (nums[0] ≤ nums[1] ≥ nums[2] ≤ nums[3]…). Not a full sort — just ensure the zigzag property holds. One pass!",pros:['O(n) linear time','In-place, O(1) space'],cons:['Not a full sort — just a zigzag arrangement','Limited use cases'],uses:['Interview problems','Specific data visualization','Alternating sequence generation'],avoid:'When full sorted order is needed',time:'O(n)',space:'O(1)',desc:'Single-pass: at each even index ensure element ≤ next; at odd index ensure ≥ next. Swap if violated.'},
-  'Sorting:stooge_sort':{eli5:"Recursively sort the first 2/3 of the array, then the last 2/3, then the first 2/3 again. Extremely inefficient — this is essentially a joke algorithm like bogo sort but slightly better.",pros:["It's an interesting recursive algorithm","Has a known time complexity unlike bogo"],cons:['O(n^2.7) — worse than O(n²)','Never use this'],uses:['Theoretical interest only'],avoid:'Everything',time:'O(n^2.7)',space:'O(n)',desc:'Recursively sort first 2/3, last 2/3, first 2/3 again. A deliberately inefficient sorting algorithm.'},
-  'Sorting:bogo_sort':{eli5:"Randomly shuffle the entire array. Check if it's sorted. No? Shuffle again. Repeat until lucky. The average case is O(n·n!) — for 10 elements, that's 36 million shuffles on average!",pros:["Simplest possible code","Has a 1/n! chance of sorting instantly"],cons:['Average O(n·n!) — practically infinite time','Entirely randomness-dependent','Might never terminate'],uses:['Teaching what NOT to do','Comedy and thought experiments'],avoid:'Absolutely everything',time:'O(n·n!)',space:'O(1)',desc:'Randomly permutes the array until it happens to be sorted. The worst sorting algorithm ever conceived.'},
-  'Searching:binary_search':{eli5:"Search a sorted array by always checking the middle element. If the target is smaller, discard the right half. If larger, discard the left half. Each step eliminates half the remaining elements — like finding a word in a dictionary.",pros:['O(log n) — very fast','Simple and well-understood','Works on any sorted random-access data'],cons:['Requires sorted input','Not suitable for linked lists (no random access)'],uses:['Database indexes','Standard library search functions','Finding boundaries in sorted arrays'],avoid:'Unsorted data',time:'O(log n)',space:'O(1)',desc:'Halves the search space at each step: compare target to midpoint, eliminate left or right half.'},
-  'Searching:linear_search':{eli5:"Check each element one by one from start to end. Simple — but must examine every element in the worst case. Like looking for your keys by checking each drawer one at a time.",pros:['Works on ANY data (sorted or unsorted)','No preprocessing needed','Works on linked lists'],cons:['O(n) — slow for large datasets'],uses:['Small unsorted lists','Linked lists','One-off searches where sorting is not worth it'],avoid:'Large datasets or repeated searches on the same data',time:'O(n)',space:'O(1)',desc:'Sequentially checks each element until target found or list exhausted.'},
-  'Searching:jump_search':{eli5:"Instead of checking every element, jump ahead in blocks of size √n. When you overshoot the target, go back to the previous block and do a linear scan within it.",pros:['O(√n) — between linear and binary','Works with sequential access (magnetic disks)'],cons:['Requires sorted input','Slower than binary search for random access'],uses:['Sorted data on sequential-access storage','When backward jumps are costly'],avoid:'When random access is available (use binary search)',time:'O(√n)',space:'O(1)',desc:'Jumps ahead by √n steps until overshooting target, then linearly scans backwards within the block.'},
-  'Searching:interpolation_search':{eli5:"Like binary search, but instead of always checking the middle, estimate WHERE the target should be based on its value relative to the range. Like opening a dictionary at 'Z' when looking for 'zebra'.",pros:['O(log log n) for uniformly distributed data','Fewer probes than binary search for uniform distributions'],cons:['O(n) worst case if data is non-uniform','Complex formula','Requires sorted uniform data'],uses:['Uniformly distributed sorted arrays','Phone book-style lookups'],avoid:'Non-uniform distributions or small datasets',time:'O(log log n)',space:'O(1)',desc:'Estimates probe position using value interpolation: pos = lo + (target-arr[lo])/(arr[hi]-arr[lo]) * (hi-lo).'},
-  'Searching:exponential_search':{eli5:"Start from index 1, keep doubling (1, 2, 4, 8, 16, 32...) until you find a value ≥ target or exceed array bounds. Then run binary search in the last doubling range [prev, current].",pros:['O(log n) — same as binary search','Works on unbounded/infinite sorted arrays','Better than binary search when target is near the start'],cons:['Requires sorted input'],uses:['Unbounded sorted arrays','When the range is not known'],avoid:'Standard fixed-size arrays where binary search works fine',time:'O(log n)',space:'O(1)',desc:'Find range by exponential doubling, then binary search within that range.'},
-  'Searching:ternary_search':{eli5:"Like binary search but split into THREE parts instead of two. Compare target against two midpoints (m1 = lo+range/3, m2 = hi-range/3). Target determines which third to recurse on.",pros:['Works on unimodal functions (finding min/max)'],cons:['More comparisons per step than binary search','Not actually faster for sorted arrays'],uses:['Finding minimum/maximum of unimodal functions','Optimization in competitive programming'],avoid:'Standard sorted array searching (binary search is better)',time:'O(log₃ n)',space:'O(1)',desc:'Splits search space into 3 parts using 2 probes, useful for unimodal functions.'},
-  'Graph:dijkstra':{eli5:"Find the shortest path from a source to all other nodes. Always expand the nearest unvisited node. When visiting a node, update distances to all its neighbors if we found a shorter route.",pros:['Optimal shortest paths for non-negative weights','O((V+E) log V) with a min-heap'],cons:['Fails with negative edge weights','Memory-intensive for dense graphs'],uses:['GPS navigation','Network routing protocols (OSPF)','Game AI pathfinding'],avoid:'Graphs with negative edge weights (use Bellman-Ford)',time:'O((V+E)log V)',space:'O(V)',desc:"Greedy single-source shortest path: always visit nearest unvisited node, relax all outgoing edges."},
-  'Graph:bellman_ford':{eli5:"Relax ALL edges V-1 times. In each relaxation, update distance to a node if a shorter path through another node is found. Unlike Dijkstra, handles negative weights and detects negative cycles.",pros:['Handles negative edge weights','Detects negative cycles','Simpler to implement than Dijkstra'],cons:['O(V·E) — much slower than Dijkstra','Overkill when all weights are non-negative'],uses:['Currency arbitrage detection','Routing with negative costs','Detecting negative cycles in financial graphs'],avoid:'Large graphs with all non-negative weights (use Dijkstra)',time:'O(V·E)',space:'O(V)',desc:'Relax all V-1 edges iteratively. A V-th relaxation that still improves means a negative cycle exists.'},
-  'Graph:a_star':{eli5:"Like Dijkstra but guided by a heuristic: f(n) = g(n) + h(n). g(n) is actual cost so far; h(n) is estimated remaining cost to goal. Always expand the node with lowest f(n) first.",pros:['Faster than Dijkstra with a good heuristic','Optimal if heuristic is admissible (never overestimates)'],cons:['Heuristic design is problem-specific','High memory usage in worst case'],uses:['Game pathfinding (most used algorithm in games)','Robot navigation','Puzzle solving (8-puzzle, 15-puzzle)'],avoid:'When no good heuristic exists',time:'O(E)',space:'O(V)',desc:'Best-first search using f(n)=g(n)+h(n). Expands most promising nodes first guided by heuristic.'},
-  'Graph:traversal':{eli5:"BFS (Breadth-First): visit neighbors level by level using a queue — explores all nodes at distance d before distance d+1. DFS (Depth-First): dive as deep as possible using a stack before backtracking.",pros:['BFS finds shortest paths in unweighted graphs','DFS uses O(h) memory vs O(w) for BFS','Both find all reachable nodes in O(V+E)'],cons:['Must visit every reachable node','BFS can use a lot of memory for wide graphs'],uses:['BFS: shortest path, web crawling, social network levels','DFS: cycle detection, topological sort, maze solving'],avoid:'Weighted shortest paths (use Dijkstra)',time:'O(V+E)',space:'O(V)',desc:'BFS uses queue for level-order traversal. DFS uses stack (or recursion) for depth-first traversal.'},
-  'Graph:cycle_detection':{eli5:"Walk through the graph using DFS, tracking the current recursion path (a 'stack'). If we reach a node that is already in the current path, we found a back edge — a cycle!",pros:['O(V+E) time and space','Works for directed and undirected graphs','Also reveals the cycle path'],cons:['Directed vs undirected requires different handling'],uses:['Dependency cycle detection in build systems','Deadlock detection in OS','Detecting circular references'],avoid:"Trees (they're acyclic by definition)",time:'O(V+E)',space:'O(V)',desc:'DFS with a recursion stack; if we visit a node already in the current path, a cycle is found.'},
-  'Graph:kahns_algorithm':{eli5:"Topological sort using in-degrees. Find all nodes with in-degree 0 (no dependencies). Process them: add to result, decrement neighbors' in-degrees. New 0-in-degree nodes go into the queue.",pros:['Intuitive queue-based approach','Also detects cycles (if result has fewer than V nodes)'],cons:['Only for DAGs (directed acyclic graphs)','Multiple valid orderings exist'],uses:['Build systems (make, webpack)','Course prerequisites','Package manager dependency resolution'],avoid:'Graphs with cycles',time:'O(V+E)',space:'O(V)',desc:"Kahn's algorithm: process nodes with in-degree 0, decrement neighbors, add new 0-degree nodes to queue."},
-  'Graph:minimum_spanning_tree':{eli5:"Connect all nodes with edges of minimum total weight, without creating any cycles. Kruskal's: sort all edges, greedily add cheapest edges that don't form a cycle. Prim's: grow from a starting node, always add cheapest connection to the tree.",pros:['Guarantees minimum total weight spanning tree'],cons:['Only for connected undirected graphs','Not unique if equal-weight edges exist'],uses:['Network cable layout (minimize cable length)','Power grid design','Cluster analysis in machine learning'],avoid:'Directed graphs or when not all nodes must be connected',time:'O(E log E)',space:'O(V)',desc:"Kruskal's: sort edges, union-find to check cycles. Prim's: grow tree greedily from start node."},
-  'Graph:topological_sort_dfs':{eli5:"Run DFS on the graph. When you completely finish processing a node (all its descendants visited), push it onto a stack. When DFS finishes, the stack contains a valid topological order (read from top to bottom).",pros:['Natural recursive DFS approach','O(V+E) time'],cons:['Only for DAGs','Must check for cycles separately'],uses:['Compiler dependency analysis','Task scheduling','Expression evaluation order'],avoid:'Graphs with cycles',time:'O(V+E)',space:'O(V)',desc:'DFS-based topological sort: push node to result stack when fully processed (after all descendants).'},
-  'Graph:maximum_flow':{eli5:"Model flow through a network (pipes with capacities). Ford-Fulkerson: find any path from source to sink with available capacity (augmenting path). Push maximum possible flow through it. Repeat until no augmenting path exists.",pros:['Finds maximum possible flow through network','Correct and complete'],cons:['Ford-Fulkerson: O(E·max_flow) — slow for large flows','Edmonds-Karp (BFS): O(V·E²)'],uses:['Network bandwidth maximization','Job assignment (bipartite matching)','Image segmentation'],avoid:'Simple graphs where direct calculation is easier',time:'O(V·E²)',space:'O(V+E)',desc:'Repeatedly find augmenting paths from source to sink; push flow along them until no path remains.'},
-  'Graph:markov_chain':{eli5:"A system where the next state depends only on the current state (memoryless). Each state has transition probabilities to other states. Simulate by repeatedly jumping to a new state based on current state's probabilities.",pros:['Models many real-world stochastic processes','Simple to simulate'],cons:['Memoryless assumption may not hold','Can be hard to analyze analytically'],uses:['PageRank algorithm','Weather modeling','Text generation','Board game probability analysis'],avoid:'When history matters (use higher-order models)',time:'O(n)',space:'O(n²)',desc:'Random process where state transitions depend only on current state. Simulate using probability distributions.'},
-  'Tree:traversal_inorder':{eli5:"Visit Left subtree → Current node → Right subtree. For a BST, this visits all nodes in sorted ascending order. Like reading a number line: left (smaller) first, then center, then right (larger).",pros:['Produces sorted output for BST','Clean recursive structure'],cons:['O(h) stack space — deep trees risk stack overflow'],uses:['Getting sorted elements from BST','BST validity checking','Expression tree evaluation (infix notation)'],avoid:'When level-by-level processing is needed',time:'O(n)',space:'O(h)',desc:'Recursively: left subtree → root → right subtree. Produces sorted order for BSTs.'},
-  'Tree:traversal_preorder':{eli5:"Visit Current node → Left subtree → Right subtree. The root is processed FIRST, then children. Like a family tree: parent always comes before children.",pros:['Good for tree serialization','Creates a copy of the tree','Prefix expression evaluation'],cons:['Not sorted output'],uses:['Tree serialization / copying','Directory structure printing','Prefix notation in expression trees'],avoid:'When sorted output is needed',time:'O(n)',space:'O(h)',desc:'Recursively: root → left subtree → right subtree. Processes current node before its children.'},
-  'Tree:traversal_postorder':{eli5:"Visit Left subtree → Right subtree → Current node. Children are processed BEFORE their parent. Like cleaning up: clean all sub-folders before deleting the parent folder.",pros:['Correct order for tree deletion','Postfix expression evaluation','Computes subtree sizes naturally'],cons:['Less intuitive than preorder/inorder'],uses:['Deleting/freeing tree nodes','Postfix (RPN) expression evaluation','Calculating directory sizes'],avoid:'When preorder or inorder is appropriate',time:'O(n)',space:'O(h)',desc:'Recursively: left subtree → right subtree → root. Processes children before parent.'},
-  'Tree:traversal_level_order':{eli5:"Visit all nodes floor by floor — first the root, then all of root's children, then all their children, etc. Uses a queue: dequeue a node, process it, enqueue its children.",pros:['Finds shortest path in unweighted trees','Intuitive level-by-level processing','Ideal for serialization'],cons:['O(w) memory where w = maximum width of tree'],uses:['Finding minimum depth','Serializing/deserializing trees','Finding nodes at a specific level'],avoid:'When DFS traversal is sufficient',time:'O(n)',space:'O(w)',desc:'BFS using a queue: process nodes level by level, left to right.'},
-  'Tree:traversal_zigzag':{eli5:"Level-order traversal but alternating direction: even levels go left-to-right, odd levels go right-to-left. Use a deque (double-ended queue) — add to front or back based on current level direction.",pros:['Creates interesting zigzag visual','Used in certain tree interview problems'],cons:['More complex than standard level-order'],uses:['Interview problems','Specific tree visualization requirements'],avoid:'When standard level-order suffices',time:'O(n)',space:'O(w)',desc:'Level-order traversal with alternating direction per level using a deque.'},
-  'Tree:invert_tree':{eli5:"Recursively swap every node's left and right children throughout the entire tree. The result is the mirror image of the original tree. A classic recursive problem!",pros:['Clean O(n) recursion','Modifies in-place'],cons:['Modifies the original tree'],uses:['Mirror image generation','Symmetry checking','Classic interview problem (the famous Homebrew tweet)'],avoid:'When original tree must be preserved',time:'O(n)',space:'O(h)',desc:'Recursively swap left and right children of every node. Returns mirror image of tree.'},
-  'Tree:is_balanced':{eli5:"A height-balanced tree: for every node, left and right subtree heights differ by at most 1. Check recursively — compute heights bottom-up, immediately returning -1 (invalid) if imbalance detected.",pros:['O(n) with height caching (no recomputation)'],cons:['Multiple definitions of balanced exist'],uses:['AVL tree validation','Checking if rebalancing is needed','Guaranteeing BST O(log n) operations'],avoid:'When approximate balance is sufficient',time:'O(n)',space:'O(h)',desc:'Post-order DFS checking that every node\'s left/right subtree heights differ by ≤ 1.'},
-  'Tree:max_height':{eli5:"The height of a tree is the longest path from root to any leaf. Recursively compute: height(node) = 1 + max(height(left), height(right)). Height of null = 0.",pros:['Simple recursion','Foundation for many tree algorithms'],cons:['O(h) recursive call stack'],uses:['Tree analysis','Balance checking','Complexity bounds'],avoid:'Non-tree data structures',time:'O(n)',space:'O(h)',desc:'Recursively computes tree height as 1 + max(left_height, right_height).'},
-  'Tree:bst_is_bst':{eli5:"A BST must satisfy: every node in left subtree < node, every node in right subtree > node. Check by passing min/max bounds down the recursion — left subtree has an upper bound, right subtree has a lower bound.",pros:['O(n) time, O(h) space','Validates the BST property correctly for all nodes'],cons:['Easy to get wrong (naive: only compare with direct children, misses global violations)'],uses:['BST validation after insertion','Checking deserialized trees','Interview problem'],avoid:'Nothing — this is a standard tree check',time:'O(n)',space:'O(h)',desc:'Recursively validate BST property by passing valid range [min, max] to each subtree.'},
-  'Tree:lowest_common_ancestor':{eli5:"Find the lowest (deepest) node that is an ancestor of both given nodes. In a BST: if both nodes < current, go left; if both > current, go right; otherwise, current is the LCA.",pros:['O(h) time for BST','O(n) for general binary tree','Classic tree problem'],cons:['General trees require full traversal'],uses:['File system operations','Network routing','Hierarchical data queries'],avoid:'Non-tree structures',time:'O(h)',space:'O(h)',desc:'BST: navigate left/right based on value comparisons. General tree: find nodes in left/right subtrees.'},
-  'Linked List:reverse':{eli5:"Use three pointers: prev (starts null), curr (starts at head), next (temporary). At each step: save next, point curr → prev, advance prev to curr, advance curr to next. When curr is null, prev is the new head.",pros:['O(n) time, O(1) space','Classic pointer manipulation','No extra data structures needed'],cons:['Easy to lose track of pointer order'],uses:['Palindrome checking','Undo operations','Reversing segments for k-groups'],avoid:'Arrays (just index from end)',time:'O(n)',space:'O(1)',desc:'Iterative: track prev/curr/next pointers, reverse each next pointer, advance all three each step.'},
-  'Linked List:is_cyclic':{eli5:"Floyd's Cycle Detection (Tortoise and Hare): slow pointer moves 1 step, fast pointer moves 2 steps. If there's a cycle, fast eventually laps slow and they meet. If fast reaches null, no cycle.",pros:['O(n) time, O(1) space — no hash set needed','Detects cycle with minimal memory'],cons:['Doesn\'t find cycle length or start without extra steps'],uses:['Detecting infinite loops in data structures','Finding cycle entry point (second phase of Floyd\'s)'],avoid:'Arrays (just check indices)',time:'O(n)',space:'O(1)',desc:"Floyd's algorithm: slow advances 1 step, fast advances 2. They meet if and only if a cycle exists."},
-  'Linked List:merge_two_list':{eli5:"Compare the front nodes of both sorted lists. Take the smaller one, advance that list's pointer. Repeat, building a merged sorted list. When one list empties, append the other.",pros:['O(n+m) time, O(1) space','Stable merge — preserves relative order'],cons:['Modifies original list structure'],uses:['Merge sort for linked lists','Combining sorted streams','Database merge joins'],avoid:'Random-access structures (use array merge instead)',time:'O(n+m)',space:'O(1)',desc:'Two-pointer merge: compare heads, take smaller, advance pointer. Append remainder.'},
-  'Linked List:kth_to_last':{eli5:"Use two pointers separated by k steps. Move fast pointer k steps ahead. Then move both together. When fast hits the end, slow is at the kth-from-last node.",pros:['O(n) single pass, O(1) space','Elegant two-pointer technique'],cons:['k must be valid'],uses:['Removing nth from end','Interview classic'],avoid:'Arrays (just index at len-k)',time:'O(n)',space:'O(1)',desc:'Two-pointer: separate by k steps, then advance together until fast reaches end.'},
-  'Dynamic Programming:fibonacci':{eli5:"Naive recursion recomputes fib(n-1) and fib(n-2) repeatedly — exponential! DP memoization: write each result on a sticky note. When needed again, just look it up. O(2ⁿ) becomes O(n).",pros:['Transforms O(2ⁿ) to O(n)','Core example of memoization technique','Can be reduced to O(1) space (just keep last two)'],cons:['For Fibonacci specifically, the iterative solution is even simpler'],uses:['Teaching memoization','Sequence generation','Dynamic programming intro problem'],avoid:'Using pure recursion on large n',time:'O(n)',space:'O(n)',desc:'Store computed Fibonacci values to avoid redundant recursion. Bottom-up: fill array F[0..n].'},
-  'Dynamic Programming:coin_change':{eli5:"Find minimum coins to make amount A. For each amount from 1 to A: try every coin denomination. If coin ≤ current amount, dp[amount] = min(dp[amount], dp[amount-coin]+1). Build up from base case.",pros:['Guaranteed optimal solution','Classic bottom-up DP template'],cons:['O(n·amount) may be slow for huge amounts'],uses:['Vending machine design','Making change in minimal bills','Resource allocation with discrete units'],avoid:'When greedy works (e.g., standard US coins) — but DP works always',time:'O(n·amount)',space:'O(amount)',desc:'Bottom-up DP: dp[i] = minimum coins to make amount i. For each amount, try all coin denominations.'},
-  'Dynamic Programming:knapsack':{eli5:"You have a bag with weight limit W. Items have weights and values. Fill bag to maximize value without exceeding W. dp[i][w] = max value using first i items with weight limit w. Either include item i or don't.",pros:['Guaranteed optimal solution','Classic 2D DP example'],cons:['O(n·W) may be too slow for large W','Only works for integer weights'],uses:['Resource allocation','Portfolio optimization','Cargo loading problems'],avoid:'Fractional knapsack (use greedy) or huge W',time:'O(n·W)',space:'O(n·W)',desc:'2D DP table: rows = items, cols = weight limits. dp[i][w] = max value with i items and limit w.'},
-  'Dynamic Programming:longest_increasing':{eli5:"Find the length of the longest strictly increasing subsequence. For each element i, dp[i] = longest increasing subsequence ending at i. dp[i] = 1 + max(dp[j]) for all j < i where arr[j] < arr[i].",pros:['O(n²) DP, O(n log n) with patience sort','Classic subsequence DP'],cons:['Subsequence, not substring — elements need not be adjacent'],uses:['Stock price trend analysis','Patience sorting (solitaire)','Bioinformatics sequence analysis'],avoid:'When you need contiguous subarray',time:'O(n log n)',space:'O(n)',desc:'dp[i] = LIS length ending at index i. O(n log n): maintain sorted list of smallest tail elements.'},
-  'Dynamic Programming:edit_distance':{eli5:"Minimum operations (insert/delete/replace) to transform string A into string B. dp[i][j] = edit distance between first i chars of A and first j chars of B. If chars match: free! If not: 1 + min(insert, delete, replace).",pros:['Exact O(m·n) solution','Works for any pair of strings'],cons:['O(m·n) time and space — slow for very long strings'],uses:['Spell checkers','DNA sequence alignment','Diff tools (git diff, Unix diff)','Autocorrect'],avoid:'Very long strings without approximation algorithms',time:'O(m·n)',space:'O(m·n)',desc:'dp[i][j] = min edits to transform A[0..i] to B[0..j]. Recurrence handles match, insert, delete, replace.'},
-  'Dynamic Programming:max_subarray':{eli5:"Kadane's Algorithm: scan left to right. At each position, decide: extend the current subarray OR start a new subarray at this element (whichever gives a larger sum). Track the global maximum seen.",pros:['O(n) linear time','O(1) space','Elegant greedy-DP hybrid'],cons:['Only contiguous subarrays'],uses:['Maximum profit in time series','Signal processing (finding strongest signal)','Image analysis'],avoid:'Non-contiguous subset sum problems',time:'O(n)',space:'O(1)',desc:"Kadane's: current_sum = max(arr[i], current_sum + arr[i]). max_sum = max(max_sum, current_sum)."},
-  'Dynamic Programming:buy_sell_stock':{eli5:"Track the minimum price seen so far. For each day, profit = today's price - min price so far. Track the maximum profit. One pass, O(n)!",pros:['O(n) time, O(1) space','Classic greedy/DP problem'],cons:['Only one transaction allowed in basic version'],uses:['Stock trading strategy','Profit maximization problems','Time series analysis'],avoid:'Multiple transactions (needs different DP)',time:'O(n)',space:'O(1)',desc:'Track min_price as we scan. profit = price - min_price. Answer is max profit seen.'},
-  'Dynamic Programming:climbing_stairs':{eli5:"You can take 1 or 2 steps. Ways to reach step n? It's Fibonacci! To reach step n, you came from step n-1 (1 step) or step n-2 (2 steps). dp[n] = dp[n-1] + dp[n-2].",pros:['O(n) DP, O(1) iterative','Reveals connection between problems and Fibonacci'],cons:['Limited to this specific problem type'],uses:['Teaching DP transitions','Interview warmup','Counting paths problems'],avoid:'Nothing — it\'s just Fibonacci in disguise',time:'O(n)',space:'O(1)',desc:'dp[n] = dp[n-1] + dp[n-2]. Equivalent to Fibonacci sequence.'},
-  'Dynamic Programming:longest_common_subsequence':{eli5:"Find the longest sequence of characters that appears in both strings, in order (but not necessarily adjacent). dp[i][j] = LCS length of first i chars of A and first j chars of B. If chars match, extend; otherwise take best of two choices.",pros:['Classic 2D DP','Finds optimal common subsequence'],cons:['O(m·n) time and space'],uses:['DNA sequence similarity','Diff algorithms (git diff)','Plagiarism detection'],avoid:'Substring (consecutive) — use different DP',time:'O(m·n)',space:'O(m·n)',desc:'dp[i][j] = LCS of A[0..i] and B[0..j]. If A[i]==B[j]: dp[i-1][j-1]+1. Else: max(dp[i-1][j], dp[i][j-1]).'},
-  'Array:two_sum':{eli5:"Find two indices whose values sum to target. Brute force: check all pairs O(n²). Optimal: use a hash map. For each element x, check if (target-x) is already in the map. If yes, found! If no, add x to map.",pros:['O(n) time with hash map, O(n) space','Single pass'],cons:['O(n) extra space for hash map'],uses:['Pair finding in arrays','Sum problems in competitive programming','Foundation for 3Sum and kSum'],avoid:'When O(n log n) sort-based solution is preferred',time:'O(n)',space:'O(n)',desc:'Hash map: for each element x, check if complement (target-x) exists in map. Add x to map if not found.'},
-  'Array:three_sum':{eli5:"Find all triplets summing to zero. Sort the array first. Fix one element, then use two-pointer technique on the remaining sorted subarray to find pairs summing to its negative. Skip duplicates.",pros:['O(n²) after O(n log n) sort','Returns all unique triplets without duplicates'],cons:['O(n²) — not suitable for very large arrays'],uses:['Triplet finding','Foundation for k-sum problems','Geometry (triangle existence)'],avoid:'When simple pair finding suffices',time:'O(n²)',space:'O(1)',desc:'Sort. Fix one element, use two-pointer on remainder. Carefully skip duplicate elements.'},
-  'Array:move_zeros':{eli5:"Move all zeros to the end while maintaining relative order of non-zero elements. Two-pointer: write pointer j tracks where to place next non-zero element. Scan with i: when arr[i] ≠ 0, place at j, advance j. Fill rest with zeros.",pros:['O(n) time, O(1) space','Stable: preserves relative order'],cons:['In-place: modifies original array'],uses:['Array cleanup','Partitioning data','Interview classic'],avoid:'When original array must be preserved',time:'O(n)',space:'O(1)',desc:'Write pointer j places non-zeros. Read pointer i scans. Fill arr[j..end] with zeros.'},
-  'Array:merge_intervals':{eli5:"Given overlapping time intervals, merge them. Sort by start time. For each interval: if it overlaps the last merged interval (start ≤ last_end), extend last_end. Otherwise, add as new interval.",pros:['O(n log n) — sort dominates','Clean greedy merge'],cons:['Requires sorting first'],uses:['Calendar event merging','File version ranges','Network packet reassembly'],avoid:'Non-overlapping interval problems',time:'O(n log n)',space:'O(n)',desc:'Sort by start. Scan: if overlap with last merged (start ≤ last.end), extend. Else add new interval.'},
-  'Array:rotate':{eli5:"Rotate array right by k positions. Clever O(1) space solution: reverse entire array, then reverse first k elements, then reverse last n-k elements. Three reversals = rotation!",pros:['O(n) time, O(1) space','Elegant triple-reverse trick'],cons:['Non-obvious algorithm','Modifies in place'],uses:['Array manipulation','Circular buffer operations','Image rotation'],avoid:'When creating a new array is fine (simpler)',time:'O(n)',space:'O(1)',desc:'Reverse(all), Reverse(0..k-1), Reverse(k..n-1). Three reversals produce a right rotation by k.'},
-  'Array:remove_duplicates':{eli5:"Remove duplicates from a sorted array in-place. Two pointers: j = slow writer, i = fast scanner. When arr[i] ≠ arr[j], advance j and copy arr[i] there. Return j+1 as new length.",pros:['O(n) time, O(1) space','No extra array needed'],cons:['Only works efficiently on sorted input'],uses:['Deduplication','Pre-processing for algorithms needing unique values'],avoid:'Unsorted arrays (sort first or use hash set)',time:'O(n)',space:'O(1)',desc:'Two-pointer on sorted array: write unique elements forward. Return new length.'},
-  'Array:flatten':{eli5:"Given a nested array (arrays within arrays), produce a single flat list. Recursively: for each element, if it's an array, flatten it; if it's a value, add it to result. Stack-based iterative version also works.",pros:['O(n) total elements','Clean recursive structure'],cons:['Deep recursion risk for deeply nested arrays','Multiple possible implementations'],uses:['Data preprocessing','JSON flattening','Tree to array conversion'],avoid:'Fixed-depth nesting (slice is faster)',time:'O(n)',space:'O(n)',desc:'Recursively check each element: if array, flatten recursively; if value, append to result.'},
-  'Array:longest_non_repeat':{eli5:"Find the longest substring (contiguous) with no repeating characters. Sliding window: expand right, shrink left when a duplicate enters the window. Track character positions in a hash map for O(1) left pointer jumps.",pros:['O(n) sliding window','Classic string/array problem'],cons:['O(min(n, alphabet)) hash map space'],uses:['Text processing','Compression preprocessing','Interview classic'],avoid:'When overall unique count is needed (not contiguous)',time:'O(n)',space:'O(min(n,k))',desc:'Sliding window: right pointer scans, left pointer jumps when duplicate found. Track last positions in map.'},
-  'Array:plus_one':{eli5:"Represent an integer as an array of digits. Add 1. Handle carry: start from the last digit, add 1. If result is 10, set to 0, carry the 1 to the next digit left. If all digits were 9, prepend a 1.",pros:['O(n)','Handles arbitrary precision integers'],cons:['Only adds 1 (not a general adder)'],uses:['Arbitrary precision arithmetic','Digit manipulation problems'],avoid:'When native integers suffice',time:'O(n)',space:'O(1)',desc:'Scan from right, add 1 with carry. If carry propagates past index 0, prepend 1.'},
-  'Backtracking:permute':{eli5:"Generate all n! orderings of a list. Fix one element at position 0 (try each element there by swapping), then recursively generate all permutations of the remaining n-1 elements. Backtrack: undo the swap after recursion.",pros:['Generates ALL permutations','Clean swap-based implementation'],cons:['O(n!) space for output','Only feasible for n ≤ ~10'],uses:['All orderings needed','Password brute-force','Traveling salesman (brute force)'],avoid:'n > 10 without heavy pruning',time:'O(n!)',space:'O(n)',desc:'Swap element into position 0, recurse on suffix, swap back. Tree of n! leaf nodes.'},
-  'Backtracking:subsets':{eli5:"Generate all 2ⁿ subsets of a set. At each element, make a binary choice: include it in the current subset, or don't. Two branches per element → 2ⁿ total subsets. Explore all branches via recursion.",pros:['O(2ⁿ) — exactly right for the problem','Clean include/exclude recursion'],cons:['Exponential — only feasible for n ≤ ~20'],uses:['Power set generation','Feature selection in ML','Combinatorial problem exploration'],avoid:'Large sets without filtering/pruning',time:'O(2ⁿ)',space:'O(n)',desc:'At each index: two recursive calls — one including current element, one excluding it.'},
-  'Backtracking:generate_parenthesis':{eli5:"Generate all valid combinations of n pairs of parentheses. At each step, you can add '(' if open count < n, or ')' if close count < open count. This ensures balance — explore all valid sequences.",pros:['Only generates VALID sequences (smart pruning)','O(Cₙ) where Cₙ is Catalan number'],cons:['Exponential output size — cannot avoid it'],uses:['Code formatting tools','Expression generation','Interview classic problem'],avoid:'Nothing — this is the standard approach',time:'O(4ⁿ/√n)',space:'O(n)',desc:'Add "(" if open<n; add ")" if close<open. Only valid sequences are generated.'},
-  'Backtracking:combination_sum':{eli5:"Find all combinations of numbers that sum to a target. Sort candidates. For each candidate, subtract from target and recurse. Backtrack when target becomes negative or zero. Reuse candidates allowed!",pros:['Only explores promising paths (pruning by sorting)','Clean recursive structure'],cons:['Exponential worst case'],uses:['Coin combinations','Budget allocation','Any sum-to-target combinatorial problem'],avoid:'When a DP solution exists (for counting, not enumeration)',time:'O(2^target)',space:'O(target)',desc:'DFS with pruning: for each candidate, subtract and recurse. Backtrack if sum exceeded.'},
-  'Math:prime_check':{eli5:"Is n prime? Check divisibility from 2 to √n. If any divisor found, not prime. Why √n? If n = a×b, at least one of a or b must be ≤ √n. So checking up to √n is sufficient.",pros:['O(√n) — much faster than O(n)','Simple and correct'],cons:['Slow for very large numbers (use Miller-Rabin probabilistic test)'],uses:['Basic primality testing','Cryptography (small primes)','Math puzzles'],avoid:'Very large numbers (> 10¹²) — use probabilistic tests',time:'O(√n)',space:'O(1)',desc:'Check divisibility from 2 to √n. Factor pairs mean one factor is always ≤ √n.'},
-  'Math:primes_sieve_of_eratosthenes':{eli5:"Find ALL primes up to N efficiently. Start: all numbers are prime. For each prime p starting at 2, mark all multiples of p (p², p²+p, p²+2p...) as composite. Remaining unmarked numbers are prime.",pros:['O(n log log n) — very fast','Finds all primes at once'],cons:['O(n) memory for the boolean array','Not practical for very large N (> 10⁸)'],uses:['Pre-computing all primes for competitive programming','Generating prime tables','Cryptographic applications'],avoid:'Finding one specific large prime (use Miller-Rabin)',time:'O(n log log n)',space:'O(n)',desc:'Boolean sieve: mark composites starting from each prime\'s square, stepping by the prime.'},
-  'Math:gcd':{eli5:"Euclidean algorithm: gcd(a,b) = gcd(b, a mod b). Keep substituting until remainder = 0. The last non-zero value is the GCD. Invented by Euclid in 300 BC — one of the oldest algorithms!",pros:['O(log(min(a,b))) — extremely fast','Elegant recursion','Foundation for many number theory algorithms'],cons:['Integer-only'],uses:['Fraction simplification','RSA cryptography','Solving Diophantine equations'],avoid:'Real/floating-point numbers',time:'O(log n)',space:'O(1)',desc:"gcd(a,b) = gcd(b, a%b). Base case: gcd(a,0) = a. Euclid's algorithm from 300 BC."},
-  'Math:factorial':{eli5:"n! = n × (n-1) × (n-2) × ... × 1. Simple recursion or iteration. But factorials grow ASTRONOMICALLY fast: 20! = 2.4 quadrillion. Use iterative to avoid stack overflow, BigInt for large n.",pros:['Simple O(n) computation'],cons:['Values grow extremely fast (overflow risk)','Recursive version has O(n) stack'],uses:['Combinatorics (permutation counts)','Probability calculations','Series expansions (e^x = Σ xⁿ/n!)'],avoid:'Large n without arbitrary precision integers',time:'O(n)',space:'O(1)',desc:'n! = n × (n-1) × ... × 1. Iterative: multiply from 1 to n.'},
-  'Math:fibonacci':{eli5:"F(n) = F(n-1) + F(n-2) with F(0)=0, F(1)=1. DP fills array bottom-up in O(n). Space-optimized: only keep last two values, O(1) space. Matrix exponentiation can solve it in O(log n)!",pros:['O(n) simple DP','O(1) space iterative','O(log n) matrix exponentiation'],cons:['Overflows 64-bit int at n=94'],uses:['Mathematical sequences','Golden ratio computation','Teaching DP fundamentals'],avoid:'Naive recursion on large n',time:'O(n)',space:'O(1)',desc:'Iterative: a,b = b, a+b. DP: fill array F[0..n]. Matrix: [[1,1],[1,0]]^n gives Fibonacci.'},
-  'String:knuth_morris_pratt':{eli5:"Search for pattern P in text T. Build a 'failure function' (prefix table) for P that tells you, after a mismatch, how far to jump back in the pattern — reusing matched prefix information. No backtracking in text!",pros:['O(n+m) linear time','No text backtracking'],cons:['Preprocessing required to build failure function','More complex than naive search'],uses:['Text editors (Ctrl+F)','DNA pattern matching','Log analysis'],avoid:'Single short one-time searches (indexOf is fine)',time:'O(n+m)',space:'O(m)',desc:'Precompute prefix table (failure function). Use it to skip ahead on mismatch without re-examining text.'},
-  'String:rabin_karp':{eli5:"Compute a rolling hash of the pattern. Slide a window across the text, maintaining a rolling hash. Only do character-by-character comparison when hashes match (which is rare). Efficiently find multiple patterns.",pros:['O(n+m) average','Excellent for multiple pattern search','Rolling hash enables efficient updates'],cons:['O(n·m) worst case with many hash collisions','Requires careful hash function choice'],uses:['Plagiarism detection','Multiple pattern search','Bioinformatics'],avoid:'Single pattern search (KMP is better)',time:'O(n+m)',space:'O(1)',desc:'Rolling hash window over text. Compare full pattern only on hash match (Rabin fingerprint).'},
-  'String:is_palindrome':{eli5:"Check if a string reads the same forward and backward. Two-pointer: one from start, one from end, moving toward the middle. If any pair mismatches, not a palindrome. O(n/2) comparisons.",pros:['O(n) time, O(1) space','Simple two-pointer technique'],cons:['Need to define what counts (case-sensitive? spaces? punctuation?)'],uses:['Input validation','Bioinformatics (palindromic DNA sequences)','Interview warm-up'],avoid:'Nothing — it\'s always simple',time:'O(n)',space:'O(1)',desc:'Two pointers from both ends. Compare characters, move inward. Stop if mismatch found.'},
-  'String:longest_palindromic_substring':{eli5:"Find the longest substring that is a palindrome. Manacher's algorithm: expand around each center (both odd-length and even-length centers), using previously computed palindrome radii to skip redundant comparisons.",pros:['O(n) Manacher\'s algorithm','Finds exact longest palindromic substring'],cons:['Manacher\'s is complex to implement','Brute force is O(n³), expand-around-center is O(n²)'],uses:['DNA analysis','String matching problems','Interview problem'],avoid:'Finding all palindromes (different problem)',time:'O(n)',space:'O(n)',desc:"Manacher's: transform string, compute palindrome radii using previously found palindromes."},
-  'String:caesar_cipher':{eli5:"Shift each letter in the message by k positions in the alphabet. 'A' with shift 3 becomes 'D'. 'Z' with shift 3 wraps around to 'C'. Decoding: shift by -k (or 26-k).",pros:['O(n) simple substitution','Historically significant (Julius Caesar used it)'],cons:['Completely insecure — only 25 possible keys','Vulnerable to frequency analysis'],uses:['ROT13 (shift 13) in newsgroups','Teaching cryptography basics','Simple data obfuscation'],avoid:'Any actual security need',time:'O(n)',space:'O(n)',desc:'Shift each character by k: c → (c - A + k) mod 26 + A. Decode by shifting by 26-k.'},
-  'String:group_anagrams':{eli5:"Group strings that are anagrams of each other. For each string, sort its characters to get a canonical key. Strings with the same sorted key are anagrams. Use a hash map from key → list of anagrams.",pros:['O(n·k·log k) where k = max string length','Clean hash map approach'],cons:['Sorting each string adds k log k factor'],uses:['Word games','Text analysis','Grouping similar words'],avoid:'When just checking two strings (simpler comparison)',time:'O(n·k log k)',space:'O(n·k)',desc:'Sort each string\'s characters as hash key. Group strings with identical sorted-character keys.'},
-  'Matrix:spiral_traversal':{eli5:"Traverse a matrix in a spiral: go right along top row, down along right column, left along bottom row, up along left column. Shrink all four boundaries after each direction. Stop when boundaries cross.",pros:['O(m·n) visits every cell once','Elegant boundary tracking'],cons:['Off-by-one errors are common','4 direction changes to manage'],uses:['Matrix printing','Image processing','Shell-sort conceptual basis'],avoid:'When row-major or column-major order suffices',time:'O(m·n)',space:'O(1)',desc:'Maintain top/bottom/left/right boundaries. Traverse each edge, shrink boundary, repeat.'},
-  'Matrix:rotate_image':{eli5:"Rotate an n×n matrix 90° clockwise in-place. Step 1: Transpose (swap arr[i][j] and arr[j][i]). Step 2: Reverse each row. Just two passes over the matrix — no extra space needed!",pros:['O(n²) in-place','Elegant two-step approach (transpose + reverse)'],cons:['Only works for square matrices'],uses:['Image rotation in graphics','Game board rotation','Computer vision preprocessing'],avoid:'Non-square matrices (need different approach)',time:'O(n²)',space:'O(1)',desc:'Transpose matrix (swap diagonally), then reverse each row. Results in 90° clockwise rotation.'},
-  'Matrix:search_in_sorted_matrix':{eli5:"Matrix is sorted row-wise and column-wise. Start from top-right corner. If current > target, move left (eliminate column). If current < target, move down (eliminate row). If equal, found!",pros:['O(m+n) — much faster than O(m·n) brute force','Elegant staircase search'],cons:['Requires both row-sorted and column-sorted matrix'],uses:['Database range queries','2D sorted data search'],avoid:'Unsorted matrices',time:'O(m+n)',space:'O(1)',desc:'Start top-right: if > target move left, if < target move down, if == target: found!'},
-  'Matrix:count_paths':{eli5:"Count paths from top-left to bottom-right moving only right or down. DP: dp[i][j] = dp[i-1][j] + dp[i][j-1] (came from above or from left). Base case: top row and left column are all 1.",pros:['O(m·n) DP','Classic 2D DP example'],cons:['Only works for right/down movement'],uses:['Combinatorics (equivalent to C(m+n-2, m-1))','Grid navigation problems','Robot path planning'],avoid:'When obstacles exist (need different handling)',time:'O(m·n)',space:'O(m·n)',desc:'dp[i][j] = paths to reach cell (i,j) = dp[i-1][j] + dp[i][j-1].'},
-  'Bit Manipulation:single_number':{eli5:"Find the element that appears only once in an array where all others appear twice. XOR every element. XOR of same numbers = 0. So all pairs cancel out, leaving only the single element!",pros:['O(n) time, O(1) space','Completely elegant bit trick'],cons:['Only works when exactly one element appears an odd number of times'],uses:['Finding unique element','Error detection in data transmission','XOR tricks in competitive programming'],avoid:'When multiple unique elements exist',time:'O(n)',space:'O(1)',desc:'XOR all elements. Pairs cancel (a XOR a = 0). Result is the single unique element.'},
-  'Bit Manipulation:count_ones':{eli5:"Count set bits (1s) in binary representation of n. Brian Kernighan's trick: n & (n-1) clears the lowest set bit. Count how many times until n = 0.",pros:['O(k) where k = number of set bits','Much faster than O(32) if few bits set'],cons:['O(32) worst case if all bits set'],uses:['Hamming weight computation','Population count in hardware','Bit manipulation tricks'],avoid:'When hardware popcount instruction is available',time:'O(k)',space:'O(1)',desc:'n & (n-1) removes lowest set bit. Count iterations until n = 0.'},
-  'Bit Manipulation:power_of_two':{eli5:"Is n a power of 2? A power of 2 in binary has exactly one set bit: 1, 10, 100, 1000... Trick: n & (n-1) == 0 clears the only set bit. If result is 0, n had exactly one bit set.",pros:['O(1) — single bitwise operation','Elegant bit trick'],cons:['Edge case: n must be > 0'],uses:['Checking memory alignment','Hash table size validation','Compiler optimizations'],avoid:'Nothing — this is the standard approach',time:'O(1)',space:'O(1)',desc:'n & (n-1) clears lowest set bit. Powers of 2 have exactly 1 set bit, so result = 0.'},
-  'Bit Manipulation:reverse_bits':{eli5:"Reverse the 32 bits of an integer. Method: take LSB of n, append to result, shift result left, shift n right. Repeat 32 times. Or use divide-and-conquer: swap halves, then quarters, then pairs, then adjacent bits.",pros:['O(1) for fixed 32-bit integers','Bit manipulation mastery example'],cons:['Implementation varies for different word sizes'],uses:['Graphics (pixel manipulation)','Network byte order conversion','Embedded systems'],avoid:'When reflection function is available',time:'O(1)',space:'O(1)',desc:'Extract LSB, build reversed result bit by bit with 32 iterations.'},
-  'Heap:sliding_window_max':{eli5:"Find the maximum in each sliding window of size k. Use a monotonic deque: maintain indices in decreasing order of value. Front is always the maximum. Remove indices out of window from front; remove smaller values from back before inserting.",pros:['O(n) linear time','Each element added and removed at most once'],cons:['Non-trivial deque management','O(k) space for the deque'],uses:['Stock price maximum in k-day windows','Network buffer analysis','Any sliding maximum query'],avoid:'Window size = 1 or window = entire array',time:'O(n)',space:'O(k)',desc:'Monotonic deque: maintain decreasing order. Front = max. Remove out-of-window front, smaller back elements.'},
-  'Greedy:gale_shapley':{eli5:"Stable matching between two groups (e.g. doctors and hospitals). Each man proposes to his top choice. Women accept/upgrade: accept if free, or if proposer is better than current partner (who then re-proposes). Repeat until everyone matched.",pros:['Guaranteed stable matching','O(n²) time','Proposer-optimal — best possible for proposing side'],cons:['Biased toward proposing side','Receiver-pessimal — worst stable matching for receivers'],uses:['Medical residency matching (NRMP since 1952)','College admissions','Job recruitment matching'],avoid:'When fairness between sides is required',time:'O(n²)',space:'O(n²)',desc:"Deferred acceptance algorithm: proposers propose in preference order; receivers hold best offer seen."},
-  'Greedy:max_contiguous_subsequence_sum':{eli5:"Find the contiguous subarray with the largest sum (Kadane's algorithm). At each position: should I extend the current subarray or start fresh? Take the max of (arr[i]) vs (current_sum + arr[i]).",pros:['O(n) linear time','O(1) space','Elegant greedy decision'],cons:['Returns sum, not the subarray itself (need indices too for that)'],uses:['Maximum profit in time series','Genomic sequence analysis','Signal processing'],avoid:'Non-contiguous subset problems',time:'O(n)',space:'O(1)',desc:"Kadane's: current = max(arr[i], current+arr[i]). answer = max(answer, current)."},
-  'Stack:valid_parenthesis':{eli5:"Use a stack. Scan left to right: push opening brackets. On closing bracket, check if top of stack is the matching opener — if yes, pop it; if no, string is invalid. End: stack must be empty.",pros:['O(n) time, O(n) space','Handles multiple bracket types simultaneously'],cons:['Only for bracket matching — can\'t handle other syntax'],uses:["Code editors (syntax highlighting)",'Compiler/interpreter parsing','Mathematical expression validation'],avoid:'Non-bracket validation',time:'O(n)',space:'O(n)',desc:'Push openers. On closer, check if top matches. Pop if yes, invalid if no. Valid iff stack empty at end.'},
-  'Stack:ordered_stack':{eli5:"Maintain a stack where elements are always in sorted order (min at top). To push x: pop all elements smaller than x, push x, then push them back. The stack is always sorted.",pros:['O(n) amortized per push','Elements popped are sorted'],cons:['O(n) worst case per push operation'],uses:['Stack-based sorting','Data stream processing','Online median/percentile tracking'],avoid:'When a heap (priority queue) is more appropriate',time:'O(n)',space:'O(n)',desc:'Before pushing x, pop all elements > x to maintain sorted order from top.'},
-  'Compression:rle_compression':{eli5:"Run-Length Encoding: scan the input, count consecutive identical characters, output (count, character) pairs. 'AAABBBCCCC' → '3A3B4C'. Excellent for repetitive data; can expand non-repetitive data.",pros:['O(n) time and space','Simple implementation','Lossless'],cons:['Can expand data if little repetition (ABCD → 1A1B1C1D)','Only effective on repetitive data'],uses:['BMP image compression','Fax transmission','Simple data compression in embedded systems'],avoid:'Random or diverse data',time:'O(n)',space:'O(n)',desc:'Scan input, count consecutive identical characters, emit (count, char) pairs.'},
-  'Compression:huffman_coding':{eli5:"Assign shorter codes to frequent characters and longer codes to rare ones. Build a priority queue (min-heap) of character frequencies. Repeatedly merge two lowest-frequency nodes into a tree. Path from root = binary code.",pros:['Optimal prefix-free code — cannot be compressed further with fixed codes','Used in real formats: ZIP, JPEG, MP3'],cons:['Two-pass: must know frequencies first','Overhead for storing the Huffman tree'],uses:['ZIP/DEFLATE compression','JPEG image compression','MP3 audio encoding'],avoid:'When all characters have equal frequency (fixed-width is just as good)',time:'O(n log n)',space:'O(n)',desc:'Build min-heap of frequencies. Repeatedly merge two minimums into parent. Path to leaf = code.'},
-  'Queue:moving_average':{eli5:"Compute the average of the last k elements in a stream. Use a fixed-size queue: when new element arrives, add to queue and sum. If queue exceeds size k, remove oldest element from sum. Average = sum / size.",pros:['O(1) per update','O(k) space'],cons:['Only for fixed window size'],uses:['Stock price smoothing','Sensor data processing','Network latency averaging'],avoid:'Variable window sizes',time:'O(1)',space:'O(k)',desc:'Fixed-size queue: add new, remove old, maintain running sum for O(1) average.'},
-  'Queue:max_sliding_window':{eli5:"Find max in each window position as window slides. Use a monotonic deque: maintain decreasing order of values. Front is always the maximum for the current window.",pros:['O(n) linear time'],cons:['Complex deque logic'],uses:['Financial time series','Signal processing'],avoid:'Small k where brute force is clearer',time:'O(n)',space:'O(k)',desc:'Monotonic deque maintaining decreasing order. Front = window maximum.'},
-  'Map:is_anagram':{eli5:"Two strings are anagrams if they contain the same characters with the same frequencies. Compare character frequency maps (or sort both strings and compare). The hash map approach is O(n).",pros:['O(n) with hash map','O(1) space using fixed 26-letter array for lowercase'],cons:['Must define character set'],uses:['Word games','Text analysis','Duplicate detection'],avoid:'Nothing — straightforward',time:'O(n)',space:'O(1)',desc:'Count character frequencies in both strings. Compare maps (or sort both strings).'},
-  'Map:valid_sudoku':{eli5:"Validate a 9×9 Sudoku board. Check: each row, each column, and each 3×3 box must contain digits 1-9 with no repeats. Use 27 hash sets (9 rows + 9 cols + 9 boxes) and scan all 81 cells once.",pros:['O(1) — always 81 cells'],cons:['Only validates, doesn\'t solve'],uses:['Sudoku game validation','Constraint satisfaction problems'],avoid:'Nothing — standard approach',time:'O(1)',space:'O(1)',desc:'Use 27 sets for rows, columns, 3×3 boxes. Detect duplicates in single O(81) scan.'},
-};
-
 const DEFAULT_ELI5 = (cat, alg) => ({
   eli5:`This ${cat} algorithm processes input data step by step to arrive at the correct output. Step through the animation to observe how state changes with each operation.`,
   pros:['Well-studied algorithm with known complexity','Clear and deterministic behavior'],
   cons:['May not be optimal for all input distributions','Verify complexity before use at scale'],
   uses:['Competitive programming','CS education','Foundation for more complex algorithms'],
   avoid:'When a simpler built-in function already solves the problem',
-  time:'O(n)',space:'O(1)',
+  time:'O(n)',
+  space:'O(1)',
   desc:`A ${cat} algorithm — ${fmt(alg)}. See the Code tab for the original Python implementation. Step through the animation to understand each phase.`
 });
 
 function fmt(s){ return s.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()); }
-function getInfo(cat,alg){ return ELI5_DB[`${cat}:${alg}`] || DEFAULT_ELI5(cat,alg); }
+function getInfo(cat,alg){ return ELI5[`${cat}:${alg}`] || DEFAULT_ELI5(cat,alg); }
 
 // ═══════════════════════════════════════════════
 // VUE APP
 // ═══════════════════════════════════════════════
-createApp({
+const app = createApp({
   setup(){
-    const theme = ref('dark');
+    const theme = ref(localStorage.getItem('bc-theme') || 'dark');
     const drawerOpen = ref(false);
     const q = ref('');
     const ex = reactive({});
@@ -741,6 +661,8 @@ createApp({
     const sbScroll = ref(null);
     const sidebarEl = ref(null);
     const histIdx = ref(0);
+    
+    // Visualizer state refs
     const visParams = ref([]);
     const visLegend = ref([]);
     const visStats = ref([]);
@@ -748,10 +670,11 @@ createApp({
     const canvasH = ref(280);
 
     let ctx = null;
-    let history = [];   // array of snapshots for step-back
-    let currentVis = null;  // current visualizer instance
+    let history = [];
+    let currentVis = null;
     let rafId = null;
     let lastT = 0;
+    let resizeObserver = null;
 
     // ─── FILTERED ALGS ───
     const filtered = computed(()=>{
@@ -771,9 +694,11 @@ createApp({
     function toggleCat(cat){ ex[cat]=!ex[cat]; }
     function expandAll(){ for(const c of Object.keys(filtered.value)) ex[c]=true; }
     function collapseAll(){ for(const c of Object.keys(ALGS)) ex[c]=false; }
+    
     function onSearch(){
       if(q.value) for(const c of Object.keys(filtered.value)) ex[c]=true;
     }
+    
     function onSbScroll(e){
       if(e.target.scrollTop === 0 && searchInp.value) searchInp.value.focus();
     }
@@ -790,11 +715,18 @@ createApp({
       playing.value = false;
       drawerOpen.value = false;
 
-      // Fetch code
+      // Fetch code with error handling
       const folder = cat.toLowerCase().replace(/\s+/g,'_');
-      fetch(`https://raw.githubusercontent.com/mrkinix/algorithms/main/algorithms/${folder}/${alg}.py`)
-        .then(r=>r.text()).then(t=>{ code.value=t; })
-        .catch(()=>{ code.value=`# ${alg}.py\n# https://github.com/mrkinix/algorithms`; });
+      try {
+        const response = await fetch(`https://raw.githubusercontent.com/mrkinix/algorithms/main/algorithms/${folder}/${alg}.py`);
+        if (response.ok) {
+          code.value = await response.text();
+        } else {
+          code.value = `# ${alg}.py\n# Could not load from GitHub\n# https://github.com/mrkinix/algorithms`;
+        }
+      } catch (e) {
+        code.value = `# ${alg}.py\n# Error loading source\n# ${e.message}`;
+      }
 
       await nextTick();
       initVis(cat, alg);
@@ -803,27 +735,31 @@ createApp({
     // ─── THEME ───
     function setTheme(t){
       theme.value = t;
+      localStorage.setItem('bc-theme', t);
       document.documentElement.classList.remove('dark','sepia','light');
       if(t!=='dark') document.documentElement.classList.add(t);
       // Update Android nav bar color
       const colors = {dark:'#0d1117',sepia:'#ede4d8',light:'#f6f8fa'};
       document.getElementById('themeColor').setAttribute('content', colors[t]);
-      if(currentVis) currentVis.draw();
+      if(currentVis) draw();
     }
 
     // ─── CANVAS INIT ───
     function initCanvas(){
-      if(!cvs.value) return;
+      if(!cvs.value) return false;
       const el = cvs.value;
       const dpr = window.devicePixelRatio || 1;
       const w = el.parentElement.offsetWidth;
       const h = canvasH.value;
+      if (w === 0 || h === 0) return false;
+      
       el.width = w * dpr;
       el.height = h * dpr;
-      el.style.width = w+'px';
-      el.style.height = h+'px';
+      el.style.width = w + 'px';
+      el.style.height = h + 'px';
       ctx = el.getContext('2d');
       ctx.scale(dpr, dpr);
+      return true;
     }
 
     function getW(){ return cvs.value ? cvs.value.parentElement.offsetWidth : 300; }
@@ -887,49 +823,65 @@ createApp({
 
     // ─── PARAMS ───
     function onParamChange(){
-      if(currentVis){ currentVis.rebuild(); draw(); }
+      if(currentVis){ 
+        currentVis.rebuild(); 
+        draw(); 
+      }
     }
 
-    function getParam(id){ const p=visParams.value.find(x=>x.id===id); return p?p.value:null; }
+    function getParam(id){ 
+      const p = visParams.value.find(x => x.id === id); 
+      return p ? p.value : null; 
+    }
 
     // ─── VISUALIZER INIT ───
     function initVis(cat, alg){
       stopAnim();
-      history=[];
-      histIdx.value=0;
-      playing.value=false;
+      history = [];
+      histIdx.value = 0;
+      playing.value = false;
 
       currentVis = buildVis(cat, alg);
       if(!currentVis) return;
 
       // Set canvas height based on cat
-      canvasH.value = cat==='Matrix'?320 : cat==='Graph'?320 : cat==='Tree'?300 : 280;
+      canvasH.value = cat === 'Matrix' ? 320 : cat === 'Graph' ? 320 : cat === 'Tree' ? 300 : 280;
 
-      nextTick(()=>{
-        initCanvas();
-        currentVis.rebuild();
-        draw();
+      nextTick(() => {
+        if (initCanvas()) {
+          currentVis.rebuild();
+          draw();
+        }
       });
     }
 
     function draw(){
-      if(!ctx||!currentVis) return;
-      const W=getW(), H=getH();
+      if(!ctx || !currentVis || !cvs.value) return;
+      const W = getW(), H = getH();
+      if (W === 0 || H === 0) return;
+      
       ctx.save();
-      const dpr=window.devicePixelRatio||1;
-      ctx.clearRect(0,0,W*dpr,H*dpr);
-      const C=getColors();
-      ctx.fillStyle=C.bg;
-      ctx.fillRect(0,0,W*dpr,H*dpr);
-      currentVis.draw(ctx, W, H, C);
+      const dpr = window.devicePixelRatio || 1;
+      ctx.clearRect(0, 0, W * dpr, H * dpr);
+      const C = getColors();
+      ctx.fillStyle = C.bg;
+      ctx.fillRect(0, 0, W * dpr, H * dpr);
+      
+      try {
+        currentVis.draw(ctx, W, H, C);
+      } catch (e) {
+        console.error('Draw error:', e);
+      }
+      
       ctx.restore();
+      
       // update stats
-      if(currentVis.getStats) visStats.value=currentVis.getStats();
-      if(currentVis.getLabel) visStateLabel.value=currentVis.getLabel();
+      if(currentVis.getStats) visStats.value = currentVis.getStats();
+      if(currentVis.getLabel) visStateLabel.value = currentVis.getLabel();
     }
 
     function snapshotState(){
-      if(!currentVis||!currentVis.snapshot) return;
+      if(!currentVis || !currentVis.snapshot) return;
       const snap = currentVis.snapshot();
       if(snap){
         history = history.slice(0, histIdx.value);
@@ -943,36 +895,50 @@ createApp({
       snapshotState();
       const alive = currentVis.step();
       draw();
-      if(!alive){ stopAnim(); playing.value=false; }
+      if(!alive){ 
+        stopAnim(); 
+        playing.value = false; 
+      }
     }
 
-    function stepFwd(){ if(currentVis && !currentVis.done) doStep(); }
+    function stepFwd(){ 
+      if(currentVis && !currentVis.done) doStep(); 
+    }
 
     function stepBack(){
-      if(histIdx.value<=0) return;
+      if(histIdx.value <= 0) return;
       histIdx.value--;
-      if(currentVis&&currentVis.restore&&history[histIdx.value]){
+      if(currentVis && currentVis.restore && history[histIdx.value]){
         currentVis.restore(history[histIdx.value]);
         draw();
       }
     }
 
     function togglePlay(){
-      if(currentVis&&currentVis.done){ restart(); return; }
-      playing.value=!playing.value;
+      if(currentVis && currentVis.done){ 
+        restart(); 
+        return; 
+      }
+      playing.value = !playing.value;
       if(playing.value) schedAnim();
       else stopAnim();
     }
 
-    function stopAnim(){ playing.value=false; cancelAnimationFrame(rafId); }
+    function stopAnim(){ 
+      playing.value = false; 
+      if (rafId) {
+        cancelAnimationFrame(rafId); 
+        rafId = null;
+      }
+    }
 
     function schedAnim(){
       if(!playing.value) return;
       rafId = requestAnimationFrame((t)=>{
         if(!playing.value) return;
-        const delay = Math.max(5, 700-speed.value*0.7);
-        if(t-lastT>=delay){
-          lastT=t;
+        const delay = Math.max(5, 700 - speed.value * 0.7);
+        if(t - lastT >= delay){
+          lastT = t;
           doStep();
         }
         if(playing.value) schedAnim();
@@ -981,10 +947,13 @@ createApp({
 
     function restart(){
       stopAnim();
-      history=[];
-      histIdx.value=0;
-      playing.value=false;
-      if(currentVis){ currentVis.rebuild(); draw(); }
+      history = [];
+      histIdx.value = 0;
+      playing.value = false;
+      if(currentVis){ 
+        currentVis.rebuild(); 
+        draw(); 
+      }
     }
 
     // ─── MONO FONT HELPER ───
@@ -1029,7 +998,7 @@ createApp({
           {v:'random',l:'Random'},{v:'nearly',l:'Nearly Sorted'},{v:'reversed',l:'Reversed'},{v:'few_unique',l:'Few Unique'}
         ],value:'random'},
       ];
-      visLegend.value=[
+      visLegend.value = [
         {color:'#38bdf8',label:'Comparing'},
         {color:'#fb923c',label:'Pivot'},
         {color:'#4ade80',label:'Sorted'},
@@ -1376,7 +1345,7 @@ createApp({
         {id:'n',label:'Array Size',type:'range',min:10,max:40,step:1,value:20},
         {id:'target_mode',label:'Target',type:'toggle',options:[{v:'exists',l:'Exists'},{v:'missing',l:'Missing'}],value:'exists'},
       ];
-      visLegend.value=[
+      visLegend.value = [
         {color:'#38bdf8',label:'Comparing (mid/current)'},
         {color:'#1e3a52',label:'Active Range'},
         {color:'#4ade80',label:'Found'},
@@ -1457,13 +1426,13 @@ createApp({
           if(arr[t1]===target){found=t1;done=true;}
           else if(arr[t2]===target){found=t2;done=true;}
           else if(target<arr[t1]){
-            eliminated=[...eliminated,...Array.from({length:h-t1+1},(_,i)=>t1+i+1)];
+            eliminated=[...eliminated,...Array.from({length:h-t1+1},(_,i)=>t1+i+1).filter(i=>i<arr.length)];
             state.hi=t1-1;
           } else if(target>arr[t2]){
-            eliminated=[...eliminated,...Array.from({length:t2-l+1},(_,i)=>l+i)];
+            eliminated=[...eliminated,...Array.from({length:t2-l+1},(_,i)=>l+i).filter(i=>i<arr.length)];
             state.lo=t2+1;
           } else {
-            eliminated=[...eliminated,...Array.from({length:t1-l+1},(_,i)=>l+i),...Array.from({length:h-t2+1},(_,i)=>t2+i+1)];
+            eliminated=[...eliminated,...Array.from({length:t1-l+1},(_,i)=>l+i).filter(i=>i<arr.length),...Array.from({length:h-t2+1},(_,i)=>t2+i+1).filter(i=>i<arr.length)];
             state.lo=t1+1; state.hi=t2-1;
           }
           return !done;
@@ -1477,12 +1446,12 @@ createApp({
           mid=p; lo=l; high=h; state.estimated=p;
           comparisons++;
           if(arr[p]===target){found=p;done=true;}
-          else if(arr[p]<target){eliminated=[...eliminated,...Array.from({length:p-l+1},(_,i)=>l+i)];state.lo=p+1;}
-          else{eliminated=[...eliminated,...Array.from({length:h-p+1},(_,i)=>p+i)];state.hi=p-1;}
+          else if(arr[p]<target){eliminated=[...eliminated,...Array.from({length:p-l+1},(_,i)=>l+i).filter(i=>i<arr.length)];state.lo=p+1;}
+          else{eliminated=[...eliminated,...Array.from({length:h-p+1},(_,i)=>p+i).filter(i=>i<arr.length)];state.hi=p-1;}
           return !done;
         }
 
-        // Binary search variants (binary, exponential, find_min_rotate, search_insert, etc.)
+        // Binary search variants
         let {lo:l,hi:h}=state;
         if(l>h){done=true;return false;}
         const m=Math.floor((l+h)/2);
@@ -1490,10 +1459,10 @@ createApp({
         comparisons++;
         if(arr[m]===target){found=m;done=true;}
         else if(arr[m]<target){
-          eliminated=[...eliminated,...Array.from({length:m-l+1},(_,i)=>l+i)];
+          eliminated=[...eliminated,...Array.from({length:m-l+1},(_,i)=>l+i).filter(i=>i<arr.length)];
           state.lo=m+1;
         } else {
-          eliminated=[...eliminated,...Array.from({length:h-m+1},(_,i)=>m+i)];
+          eliminated=[...eliminated,...Array.from({length:h-m+1},(_,i)=>m+i).filter(i=>i<arr.length)];
           state.hi=m-1;
         }
         return !done;
@@ -1568,11 +1537,11 @@ createApp({
     // GRAPH VISUALIZER
     // ─────────────────────────────────────────────
     function buildGraphVis(alg){
-      visParams.value=[
+      visParams.value = [
         {id:'n',label:'Nodes',type:'range',min:5,max:12,step:1,value:7},
         {id:'algo',label:'Algorithm',type:'toggle',options:[{v:'bfs',l:'BFS'},{v:'dfs',l:'DFS'},{v:'dijkstra',l:'Dijkstra'}],value:alg==='dijkstra'?'dijkstra':'bfs'},
       ];
-      visLegend.value=[
+      visLegend.value = [
         {color:'#38bdf8',label:'Current'},
         {color:'#4ade80',label:'Visited'},
         {color:'#fbbf24',label:'In Queue/Stack'},
@@ -1581,7 +1550,6 @@ createApp({
 
       let nodes=[], edges=[], visited=new Set(), queue=[], stack=[], path=[], done=false, steps=0;
       let distances={}, prev={}, relaxed=[];
-      const distTable=ref([]);
 
       function rebuild(){
         const n=getParam('n');
@@ -1699,6 +1667,7 @@ createApp({
         // Edges
         edges.forEach(e=>{
           const n1=nodes[e.f], n2=nodes[e.t];
+          if (!n1 || !n2) return;
           ctx.strokeStyle=e.state==='used'?C.hi:e.state==='relaxed'?C.done:e.state==='back'?C.red:C.edge;
           ctx.lineWidth=e.state!=='default'?2:1;
           ctx.beginPath(); ctx.moveTo(n1.x,n1.y); ctx.lineTo(n2.x,n2.y); ctx.stroke();
@@ -1751,11 +1720,11 @@ createApp({
     // TREE VISUALIZER
     // ─────────────────────────────────────────────
     function buildTreeVis(alg){
-      visParams.value=[
+      visParams.value = [
         {id:'n',label:'Nodes',type:'range',min:5,max:15,step:1,value:10},
         {id:'type',label:'Tree',type:'toggle',options:[{v:'bst',l:'BST'},{v:'random',l:'Random'}],value:'bst'},
       ];
-      visLegend.value=[
+      visLegend.value = [
         {color:'#38bdf8',label:'Current'},
         {color:'#4ade80',label:'Visited'},
         {color:'#fbbf24',label:'In Queue'},
@@ -1865,8 +1834,8 @@ createApp({
     // LINKED LIST VISUALIZER
     // ─────────────────────────────────────────────
     function buildLinkedListVis(alg){
-      visParams.value=[{id:'n',label:'Length',type:'range',min:4,max:12,step:1,value:7}];
-      visLegend.value=[
+      visParams.value = [{id:'n',label:'Length',type:'range',min:4,max:12,step:1,value:7}];
+      visLegend.value = [
         {color:'#38bdf8',label:'Current / Pointer 1'},
         {color:'#4ade80',label:'Visited / Done'},
         {color:'#fbbf24',label:'Pointer 2 (fast)'},
@@ -1907,7 +1876,8 @@ createApp({
           let {slow,fast}=state;
           if(fast===-1||!hasCycle||(nodes[fast]?.next===-1&&!hasCycle)){done=true;return false;}
           ptr1=slow; ptr2=fast;
-          nodes[slow].state='slow'; nodes[fast].state='fast';
+          if (nodes[slow]) nodes[slow].state='slow';
+          if (nodes[fast]) nodes[fast].state='fast';
           const ns=nodes[slow]?.next>=0?nodes[slow].next:-1;
           const nf=nodes[fast]?.next>=0?(nodes[nodes[fast].next]?.next>=0?nodes[nodes[fast].next].next:-1):-1;
           state.slow=ns>=0?ns:0; state.fast=nf>=0?nf:0;
@@ -2004,8 +1974,8 @@ createApp({
     // DYNAMIC PROGRAMMING VISUALIZER
     // ─────────────────────────────────────────────
     function buildDPVis(alg){
-      visParams.value=[{id:'n',label:'N',type:'range',min:4,max:16,step:1,value:10}];
-      visLegend.value=[
+      visParams.value = [{id:'n',label:'N',type:'range',min:4,max:16,step:1,value:10}];
+      visLegend.value = [
         {color:'#38bdf8',label:'Current cell'},
         {color:'#4ade80',label:'Computed'},
         {color:'#fbbf24',label:'Dependencies'},
@@ -2016,33 +1986,44 @@ createApp({
       let dp2=[], input=[], coins=[], str1='', str2='';
 
       function rebuild(){
-        n=getParam('n'); dp=[]; deps=[]; current=-1; done=false; steps=0; is2D=false;
+        n=getParam('n'); 
+        dp=[]; deps=[]; current=-1; done=false; steps=0; is2D=false;
 
         if(alg==='fibonacci'||alg==='climbing_stairs'){
-          dp=new Array(n+1).fill(0); dp[0]=alg==='fibonacci'?0:1; dp[1]=1;
+          dp=new Array(n+1).fill(0); 
+          dp[0]=alg==='fibonacci'?0:1; 
+          dp[1]=1;
           current=2;
         } else if(alg==='coin_change'){
-          coins=[1,3,5]; dp=new Array(n+1).fill(Infinity); dp[0]=0; current=1;
+          coins=[1,3,5]; 
+          dp=new Array(n+1).fill(Infinity); 
+          dp[0]=0; 
+          current=1;
         } else if(alg==='max_subarray'){
           input=Array.from({length:n},()=>Math.floor(Math.random()*20)-7);
-          dp=new Array(n).fill(0); dp[0]=input[0]; current=1;
+          dp=new Array(n).fill(0); 
+          dp[0]=input[0]; 
+          current=1;
         } else if(alg==='longest_increasing'){
           input=Array.from({length:n},(_,i)=>Math.floor(Math.random()*30)+i);
           input=input.sort(()=>Math.random()-.5);
-          dp=new Array(n).fill(1); current=1;
+          dp=new Array(n).fill(1); 
+          current=1;
         } else if(alg==='buy_sell_stock'){
           input=Array.from({length:n},()=>Math.floor(Math.random()*80)+20);
-          dp=new Array(n).fill(0); current=1;
+          dp=new Array(n).fill(0); 
+          current=1;
         } else if(alg==='edit_distance'||alg==='longest_common_subsequence'){
           is2D=true;
-          str1=Array.from({length:Math.min(6,n)},()=>'abcde'[Math.floor(Math.random()*5)]).join('');
-          str2=Array.from({length:Math.min(6,n)},()=>'abcde'[Math.floor(Math.random()*5)]).join('');
+          str1=Array.from({length:Math.min(6,n>0?n:6)},()=>'abcde'[Math.floor(Math.random()*5)]).join('');
+          str2=Array.from({length:Math.min(6,n>0?n:6)},()=>'abcde'[Math.floor(Math.random()*5)]).join('');
           dp2=Array.from({length:str1.length+1},(_,i)=>Array.from({length:str2.length+1},(_,j)=>{
             if(i===0)return j; if(j===0)return i; return 0;
           }));
           current=0; // [i,j] as i*(len+1)+j
         } else {
-          dp=new Array(n+1).fill(0); current=1;
+          dp=new Array(n+1).fill(0); 
+          current=1;
         }
       }
 
@@ -2063,40 +2044,54 @@ createApp({
             }
             deps=[[i-1,j],[i,j-1],[i-1,j-1]];
           }
-          current++; i=Math.floor(current/(nn2+1)); j=current%(nn2+1);
+          current++; 
+          i=Math.floor(current/(nn2+1)); 
+          j=current%(nn2+1);
           if(i>m) done=true;
           return !done;
         }
 
         if(alg==='fibonacci'){
           if(current>n){done=true;return false;}
-          deps=[current-1,current-2]; dp[current]=dp[current-1]+dp[current-2]; current++;
+          deps=[current-1,current-2]; 
+          dp[current]=dp[current-1]+dp[current-2]; 
+          current++;
           if(current>n) done=true;
         } else if(alg==='climbing_stairs'){
           if(current>n){done=true;return false;}
-          deps=[current-1,current-2]; dp[current]=(dp[current-1]||0)+(dp[current-2]||0); current++;
+          deps=[current-1,current-2]; 
+          dp[current]=(dp[current-1]||0)+(dp[current-2]||0); 
+          current++;
           if(current>n) done=true;
         } else if(alg==='coin_change'){
           if(current>n){done=true;return false;}
-          deps=[]; coins.forEach(c=>{if(current-c>=0&&dp[current-c]!==Infinity){deps.push(current-c);const nc=dp[current-c]+1;if(nc<dp[current])dp[current]=nc;}});
+          deps=[]; 
+          coins.forEach(c=>{if(current-c>=0&&dp[current-c]!==Infinity){deps.push(current-c);const nc=dp[current-c]+1;if(nc<dp[current])dp[current]=nc;}});
           current++;
           if(current>n) done=true;
         } else if(alg==='max_subarray'){
           if(current>=n){done=true;return false;}
-          deps=[current-1]; dp[current]=Math.max(input[current],dp[current-1]+input[current]); current++;
+          deps=[current-1]; 
+          dp[current]=Math.max(input[current],dp[current-1]+input[current]); 
+          current++;
           if(current>=n) done=true;
         } else if(alg==='longest_increasing'){
           if(current>=n){done=true;return false;}
-          deps=[]; for(let j=0;j<current;j++){if(input[j]<input[current]){deps.push(j);dp[current]=Math.max(dp[current],dp[j]+1);}} current++;
+          deps=[]; 
+          for(let j=0;j<current;j++){if(input[j]<input[current]){deps.push(j);dp[current]=Math.max(dp[current],dp[j]+1);}} 
+          current++;
           if(current>=n) done=true;
         } else if(alg==='buy_sell_stock'){
           if(current>=n){done=true;return false;}
           const minSoFar=Math.min(...input.slice(0,current));
-          dp[current]=Math.max(dp[current-1],input[current]-minSoFar); current++;
+          dp[current]=Math.max(dp[current-1],input[current]-minSoFar); 
+          current++;
           if(current>=n) done=true;
         } else {
           if(current>n){done=true;return false;}
-          dp[current]=dp[current-1]+current; deps=[current-1]; current++;
+          dp[current]=dp[current-1]+current; 
+          deps=[current-1]; 
+          current++;
           if(current>n) done=true;
         }
         return !done;
@@ -2153,32 +2148,30 @@ createApp({
         ctx.fillStyle=C.txt3; ctx.font=monoFont(9); ctx.textAlign='right';
         ctx.fillText('dp:', ox-2, dpy + cellH/2 + 4);
 
-          dp.forEach((v,i)=>{
-            const x=ox+i*cellW;
-            const isCur = i===current;
-            const isDone = i<current;
-            ctx.fillStyle = isCur ? C.hi : isDone ? C.done+'44' : C.bg3;
-            ctx.strokeStyle = C.border;
-            ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.rect(x,dpy,cellW,cellH); ctx.fill(); ctx.stroke();
+        dp.forEach((v,i)=>{
+          const x=ox+i*cellW;
+          const isCur = i===current;
+          const isDone = i<current;
+          ctx.fillStyle = isCur ? C.hi : isDone ? C.done+'44' : C.bg3;
+          ctx.strokeStyle = C.border;
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.rect(x,dpy,cellW,cellH); ctx.fill(); ctx.stroke();
 
-            ctx.fillStyle = isCur ? C.nodeHiTxt : C.txt;
-            ctx.font = monoFont(12); ctx.textAlign='center'; ctx.textBaseline='middle';
-            ctx.fillText(v===Infinity?'∞':v, x+cellW/2, dpy+cellH/2);
-            ctx.textBaseline='alphabetic';
-          });
+          ctx.fillStyle = isCur ? C.nodeHiTxt : C.txt;
+          ctx.font = monoFont(12); ctx.textAlign='center'; ctx.textBaseline='middle';
+          ctx.fillText(v===Infinity?'∞':v, x+cellW/2, dpy+cellH/2);
+          ctx.textBaseline='alphabetic';
+        });
 
-          ctx.fillStyle=C.txt2; ctx.font=monoFont(10); ctx.textAlign='center';
-          ctx.fillText(fmt(alg) + (input.length ? `  max=\( {Math.max(...dp)}` : `  result= \){dp[n]}`), W/2, H-12);
-
-        }
+        ctx.fillStyle=C.txt2; ctx.font=monoFont(10); ctx.textAlign='center';
+        ctx.fillText(fmt(alg) + (input.length ? ` max= ${Math.max(...dp)}` : ` result= ${dp[n]}`), W/2, H-12);
       }
 
       function getStats(){ return [{k:'steps',v:steps},{k:'n',v:n},{k:'result',v:dp[n]??'?'}]; }
       function getLabel(){ return done 
-  ? `Done — result = ${dp[n] ?? dp2?.[str1.length]?.[str2.length] ?? '?'}`
-  : `Computing dp[${current}]…`; }
-      function snapshot(){ return {dp:[...dp],current,done,steps,is2D,dp2:JSON.parse(JSON.stringify(dp2||[])),input:[... (input||[])],str1,str2}; }
+        ? `Done — result = ${dp[n] ?? dp2?.[str1.length]?.[str2.length] ?? '?'}`
+        : `Computing dp[${current}]…`; }
+      function snapshot(){ return {dp:[...dp],current,done,steps,is2D,dp2:JSON.parse(JSON.stringify(dp2||[])),input:[...(input||[])],str1,str2}; }
       function restore(s){ dp=s.dp; current=s.current; done=s.done; steps=s.steps; is2D=s.is2D; dp2=s.dp2; input=s.input; str1=s.str1; str2=s.str2; }
 
       return {rebuild,step,draw,getStats,getLabel,snapshot,restore,get done(){return done;}};
@@ -2186,7 +2179,6 @@ createApp({
 
     // ─────────────────────────────────────────────
     // STUB VISUALIZERS FOR REMAINING CATEGORIES
-    // (lightweight but fully functional so nothing crashes)
     // ─────────────────────────────────────────────
     function buildArrayVis(alg){ return buildGenericVis('Array', alg); }
     function buildMatrixVis(alg){ return buildGenericVis('Matrix', alg); }
@@ -2242,7 +2234,7 @@ createApp({
       }
 
       function getStats(){ return [{k:'processed',v:stepIdx+'/'+data.length}]; }
-      function getLabel(){ return done ? 'Complete' : `Step \( {stepIdx}/ \){data.length}`; }
+      function getLabel(){ return done ? 'Complete' : `Step ${stepIdx}/${data.length}`; }
       function snapshot(){ return {data:JSON.parse(JSON.stringify(data)),stepIdx,done}; }
       function restore(s){ data=s.data; stepIdx=s.stepIdx; done=s.done; }
 
@@ -2252,6 +2244,58 @@ createApp({
     // ═══════════════════════════════════════════════
     // APP MOUNT + EVENT LISTENERS
     // ═══════════════════════════════════════════════
+    onMounted(() => {
+      // initial expand first category
+      const firstCat = Object.keys(filtered.value)[0] || 'Sorting';
+      ex[firstCat] = true;
+
+      // set initial theme
+      setTheme(theme.value);
+
+      // keyboard shortcuts
+      document.addEventListener('keydown', (e) => {
+        if(!selAlg.value) return;
+        if(e.key === 'ArrowRight') {
+          e.preventDefault();
+          stepFwd();
+        }
+        if(e.key === 'ArrowLeft') {
+          e.preventDefault();
+          stepBack();
+        }
+        if(e.key === ' ') { 
+          e.preventDefault(); 
+          togglePlay(); 
+        }
+        if(e.key === 'r' && (e.metaKey || e.ctrlKey)) { 
+          e.preventDefault(); 
+          restart(); 
+        }
+      });
+
+      // resize observer for canvas
+      const canvasOuter = document.querySelector('.cvs-outer');
+      if (canvasOuter) {
+        resizeObserver = new ResizeObserver(() => { 
+          if(selAlg.value && cvs.value) { 
+            initCanvas(); 
+            draw(); 
+          } 
+        });
+        resizeObserver.observe(canvasOuter);
+      }
+    });
+
+    // Cleanup on unmount
+    onMounted(() => {
+      return () => {
+        stopAnim();
+        if (resizeObserver) {
+          resizeObserver.disconnect();
+        }
+      };
+    });
+
     return {
       theme, drawerOpen, q, ex, selCat, selAlg, tab, code, speed, playing,
       cvs, searchInp, sbScroll, sidebarEl, histIdx, visParams, visLegend,
@@ -2265,25 +2309,10 @@ createApp({
       // expose for template
       fmt,
     };
-  },
-  mounted(){
-    // initial expand first category
-    this.ex[this.filtered ? Object.keys(this.filtered)[0] : 'Sorting'] = true;
-
-    // keyboard shortcuts
-    document.addEventListener('keydown', e=>{
-      if(!this.selAlg) return;
-      if(e.key==='ArrowRight') this.stepFwd();
-      if(e.key==='ArrowLeft') this.stepBack();
-      if(e.key===' ') { e.preventDefault(); this.togglePlay(); }
-      if(e.key==='r' && e.metaKey) { e.preventDefault(); this.restart(); }
-    });
-
-    // resize handler
-    const ro = new ResizeObserver(()=> { if(this.selAlg) { this.initCanvas(); this.draw(); } });
-    ro.observe(document.querySelector('.cvs-outer'));
   }
-}).mount('#app');
+});
+
+app.mount('#app');
 </script>
 </body>
 </html>
