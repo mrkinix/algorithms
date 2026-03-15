@@ -1152,7 +1152,7 @@ const app = createApp({
           case 'counting_sort': case 'radix_sort': {
             const mx=Math.max(...a),mn=Math.min(...a),cnt=new Array(mx-mn+1).fill(0);
             a.forEach(v=>cnt[v-mn]++);
-            let idx=0; cnt.forEach((c,i)=>{while(c-->0){a[idx++]=i+mn;}});
+            let idx=0; cnt.forEach((c,i)=>{while(c>0){a[idx++]=i+mn;}});
             sorted=Array.from({length:nn},(_,k)=>k); hi=[0,nn-1]; done=true;
             break;
           }
