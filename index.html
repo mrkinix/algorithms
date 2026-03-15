@@ -532,7 +532,7 @@ canvas{width:100%;display:block;touch-action:none}
               <span style="background:#febc2e"></span>
               <span style="background:#28c840"></span>
             </div>
-            <span class="code-fn">{{ selAlg }}.py — mrkinix/algorithms</span>
+            <span class="code-fn">{{ selAlg }}.py — keon/algorithms</span>
           </div>
           <div class="code-body">
             <pre>{{ code || '# Loading source code…' }}</pre>
@@ -718,11 +718,11 @@ const app = createApp({
       // Fetch code with error handling
       const folder = cat.toLowerCase().replace(/\s+/g,'_');
       try {
-        const response = await fetch(`https://raw.githubusercontent.com/mrkinix/algorithms/main/algorithms/${folder}/${alg}.py`);
+        const response = await fetch(`https://raw.githubusercontent.com/keon/algorithms/main/algorithms/${folder}/${alg}.py`);
         if (response.ok) {
           code.value = await response.text();
         } else {
-          code.value = `# ${alg}.py\n# Could not load from GitHub\n# https://github.com/mrkinix/algorithms`;
+          code.value = `# ${alg}.py\n# Could not load from GitHub\n# https://github.com/keon/algorithms`;
         }
       } catch (e) {
         code.value = `# ${alg}.py\n# Error loading source\n# ${e.message}`;
